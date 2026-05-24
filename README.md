@@ -66,22 +66,21 @@ cd Proyecto-Web-Avanzada
 npm install
 ```
 
-### 2. Configurar Base de Datos y Entorno
-1. Asegúrate de tener una instancia activa de **PostgreSQL**.
-2. Crea una base de datos vacía llamada `repuestos_db` (o el nombre de tu preferencia).
+### 2. Configurar la Base de Datos con Docker 🐳
+
+Hemos incluido un archivo `docker-compose.yml` para facilitar el levantamiento de la base de datos PostgreSQL en un contenedor aislado, evitando instalaciones locales de software adicionales:
+
+1. Asegúrate de tener **Docker** y **Docker Compose** instalados y ejecutándose.
+2. Levanta el contenedor de PostgreSQL en segundo plano ejecutando:
+   ```bash
+   docker compose up -d
+   ```
+   *Esto iniciará un contenedor llamado `repuestos_postgres` en el puerto `5432` con el usuario, contraseña y base de datos ya configurados.*
 3. Copia el archivo `.env.example` y nómbralo `.env`:
    ```bash
    cp .env.example .env
    ```
-4. Abre `.env` y actualiza las credenciales de PostgreSQL:
-   ```env
-   DB_HOST=localhost
-   DB_USER=tu_usuario_postgres
-   DB_PASSWORD=tu_contraseña_postgres
-   DB_NAME=repuestos_db
-   DB_PORT=5432
-   SESSION_SECRET=un_secreto_seguro
-   ```
+4. Los valores por defecto de `.env` ya coinciden con la configuración de Docker, por lo que **no necesitas modificar nada** si utilizas la base de datos dockerizada.
 
 ### 3. Ejecutar en Modo de Desarrollo
 Arranca el servidor en modo desarrollo utilizando `nodemon` para que se reinicie automáticamente con cada cambio en el código:
@@ -89,7 +88,7 @@ Arranca el servidor en modo desarrollo utilizando `nodemon` para que se reinicie
 npm run dev
 ```
 
-El servidor sincronizará de forma automática las tablas (`Users`, `Products` y `Sessions`) en la base de datos PostgreSQL y se levantará en: **`http://localhost:3000`**
+El servidor sincronizará de forma automática las tablas (`Users`, `Products` y `Sessions`) en la base de datos de PostgreSQL dockerizada y se levantará en: **`http://localhost:3000`**
 
 ---
 

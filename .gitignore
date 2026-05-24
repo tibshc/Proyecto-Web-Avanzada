@@ -36,3 +36,8 @@ package-lock.json
 # Sistemas Operativos
 .DS_Store
 Thumbs.db
+
+# Docker / Base de Datos local
+pgdata/
+postgres-data/
+
