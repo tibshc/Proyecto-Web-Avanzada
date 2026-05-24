@@ -1,50 +1,116 @@
 <%- include('partials/header') %>
 
-<div class="auth-wrapper">
-  <div class="glass-card auth-card">
-    <div class="auth-header">
-      <h2>Crear Cuenta</h2>
-      <p>Regístrate en el portal técnico de repuestos</p>
-    </div>
+<div class="flex items-center justify-center min-h-[75vh] py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8 bg-spotify-dark border border-spotify-highlight/50 p-8 sm:p-10 rounded-2xl shadow-2xl relative overflow-hidden group hover:border-spotify-orange/30 transition-all duration-500">
+    <!-- Efecto de brillo -->
+    <div class="absolute -top-40 -right-40 w-80 h-80 bg-spotify-orange/5 rounded-full blur-3xl group-hover:bg-spotify-orange/10 transition-all duration-500"></div>
 
-    <% if (locals.error) { %>
-      <div class="alert alert-error">
-        <i data-lucide="alert-triangle"></i>
-        <span><%= error %></span>
-      </div>
-    <% } %>
-
-    <form action="/auth/register" method="POST">
-      <div class="form-group">
-        <label for="name" class="form-label">Nombre Completo</label>
-        <input type="text" id="name" name="name" class="form-control" placeholder="Ej. Juan Pérez" required>
+    <div class="relative z-10">
+      <div class="text-center">
+        <h2 class="font-title font-extrabold text-3xl text-white tracking-tight">Crear una Cuenta</h2>
+        <p class="mt-2 text-sm text-gray-400">Regístrate en el portal de repuestos para camiones</p>
       </div>
 
-      <div class="form-group">
-        <label for="email" class="form-label">Correo Electrónico</label>
-        <input type="email" id="email" name="email" class="form-control" placeholder="juan.perez@empresa.com" required>
+      <% if (locals.error) { %>
+        <div class="mt-6 flex items-center gap-3 bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl text-sm leading-relaxed animate-pulse">
+          <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0"></i>
+          <span><%= error %></span>
+        </div>
+      <% } %>
+
+      <form class="mt-8 space-y-5" action="/auth/register" method="POST">
+        <div class="space-y-4">
+          <div>
+            <label for="name" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Nombre Completo</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500">
+                <i data-lucide="user" class="w-4 h-4"></i>
+              </span>
+              <input 
+                id="name" 
+                name="name" 
+                type="text" 
+                required 
+                class="block w-full pl-10 pr-4 py-3 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-xl text-sm transition-all outline-none" 
+                placeholder="Ej. Juan Pérez"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label for="email" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Correo Electrónico</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500">
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </span>
+              <input 
+                id="email" 
+                name="email" 
+                type="email" 
+                autocomplete="email" 
+                required 
+                class="block w-full pl-10 pr-4 py-3 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-xl text-sm transition-all outline-none" 
+                placeholder="juan.perez@empresa.com"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label for="password" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Contraseña</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </span>
+              <input 
+                id="password" 
+                name="password" 
+                type="password" 
+                required 
+                class="block w-full pl-10 pr-4 py-3 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-xl text-sm transition-all outline-none" 
+                placeholder="Mínimo 6 caracteres"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label for="role" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Rol en el Taller</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 z-10">
+                <i data-lucide="shield" class="w-4 h-4"></i>
+              </span>
+              <select 
+                id="role" 
+                name="role" 
+                required 
+                class="block w-full pl-10 pr-10 py-3 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-xl text-sm transition-all outline-none appearance-none cursor-pointer"
+              >
+                <option value="mechanic">Mecánico de Flota</option>
+                <option value="support">Soporte Técnico / Especialista</option>
+              </select>
+              <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-spotify-orange">
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button 
+            type="submit" 
+            class="group relative w-full flex justify-center py-3.5 px-4 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-sm font-bold rounded-xl shadow-lg hover:shadow-spotify-orange/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 outline-none"
+          >
+            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <i data-lucide="user-plus" class="w-4 h-4 text-spotify-orange-light group-hover:scale-110 transition-transform"></i>
+            </span>
+            Registrar Cuenta
+          </button>
+        </div>
+      </form>
+
+      <div class="mt-8 text-center text-sm">
+        <span class="text-gray-400">¿Ya tienes una cuenta? </span>
+        <a href="/auth/login" class="font-bold text-spotify-orange hover:underline transition-all">Inicia sesión aquí</a>
       </div>
-
-      <div class="form-group">
-        <label for="password" class="form-label">Contraseña</label>
-        <input type="password" id="password" name="password" class="form-control" placeholder="Mínimo 6 caracteres" required>
-      </div>
-
-      <div class="form-group">
-        <label for="role" class="form-label">Rol en la Empresa</label>
-        <select id="role" name="role" class="form-control" required>
-          <option value="mechanic">Mecánico de Flota / Taller</option>
-          <option value="support">Soporte Técnico / Especialista</option>
-        </select>
-      </div>
-
-      <button type="submit" class="btn btn-primary btn-block">
-        <i data-lucide="user-plus"></i> Registrar Cuenta
-      </button>
-    </form>
-
-    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
-      <p style="color: var(--text-secondary);">¿Ya tienes una cuenta? <a href="/auth/login">Inicia sesión aquí</a></p>
     </div>
   </div>
 </div>

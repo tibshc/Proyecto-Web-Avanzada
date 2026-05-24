@@ -1,0 +1,240 @@
+<%- include('partials/header') %>
+
+<div class="space-y-8 animate-[fadeIn_0.5s_ease-out]">
+  
+  <!-- Encabezado de la página -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-spotify-highlight/40 pb-6">
+    <div>
+      <h1 class="font-title font-extrabold text-3xl tracking-tight text-white flex items-center gap-2">
+        <i data-lucide="shopping-cart" class="text-spotify-orange w-8 h-8"></i>
+        <span>Mi Carrito de Compras</span>
+      </h1>
+      <p class="text-sm text-gray-400 mt-1">Revisa las piezas seleccionadas y finaliza tu pedido de repuestos.</p>
+    </div>
+    
+    <% if (locals.success) { %>
+      <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2.5 rounded-xl text-sm shadow-md">
+        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        <span><%= success %></span>
+      </div>
+    <% } %>
+    <% if (locals.error) { %>
+      <div class="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2.5 rounded-xl text-sm shadow-md animate-pulse">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        <span><%= error %></span>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    
+    <!-- COLUMNA IZQUIERDA: Detalle del Carrito Activo -->
+    <div class="lg:col-span-8 space-y-6">
+      <div class="bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl">
+        <h2 class="font-title font-bold text-xl text-white mb-6 flex items-center gap-2">
+          <i data-lucide="shopping-bag" class="text-spotify-orange w-5 h-5"></i>
+          <span>Artículos Agregados</span>
+        </h2>
+
+        <% if (items.length === 0) { %>
+          <div class="text-center py-16 space-y-4">
+            <div class="inline-flex bg-spotify-highlight/40 p-4 rounded-full text-gray-500">
+              <i data-lucide="shopping-cart" class="w-12 h-12"></i>
+            </div>
+            <p class="text-gray-400 font-semibold text-base">Tu carrito está vacío actualmente.</p>
+            <p class="text-xs text-gray-500">Explora nuestro catálogo y selecciona las piezas que necesitas para tu flota.</p>
+            <div class="pt-2">
+              <a href="/dashboard" class="inline-flex items-center gap-2 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md transition-all">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Ir al Catálogo
+              </a>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="space-y-4">
+            <% items.forEach(item => { %>
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-spotify-black border border-spotify-highlight/40 rounded-xl p-4 hover:border-spotify-orange/20 transition-all duration-200">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 rounded-xl bg-spotify-highlight/40 border border-spotify-highlight/60 flex items-center justify-center text-spotify-orange flex-shrink-0">
+                    <i data-lucide="package" class="w-6 h-6"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-white text-sm leading-tight"><%= item.product.name %></h3>
+                    <span class="block text-xs text-spotify-orange font-mono tracking-wider mt-1"><%= item.product.sku %></span>
+                    <span class="block text-[11px] text-gray-500 mt-0.5">Marca: <%= item.product.brand %></span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                  <!-- Control de Cantidad -->
+                  <form action="/cart/update/<%= item.id %>" method="POST" class="flex items-center bg-spotify-dark border border-spotify-highlight rounded-lg px-2 py-1">
+                    <label for="qty-<%= item.id %>" class="sr-only">Cantidad</label>
+                    <input 
+                      type="number" 
+                      id="qty-<%= item.id %>" 
+                      name="quantity" 
+                      value="<%= item.quantity %>" 
+                      min="1" 
+                      max="<%= item.product.stock %>"
+                      required
+                      onchange="this.form.submit()"
+                      class="w-12 bg-transparent text-center text-white text-xs font-bold outline-none focus:ring-0 border-0"
+                    >
+                    <span class="text-[10px] text-gray-500 font-semibold pr-1">uds</span>
+                  </form>
+
+                  <!-- Detalle de Precios -->
+                  <div class="text-right">
+                    <span class="block text-xs text-gray-500">Unit: $<%= parseFloat(item.price).toFixed(2) %></span>
+                    <span class="block text-sm font-bold text-white mt-0.5">$<%= (parseFloat(item.price) * item.quantity).toFixed(2) %></span>
+                  </div>
+
+                  <!-- Eliminar artículo -->
+                  <form action="/cart/remove/<%= item.id %>" method="POST">
+                    <button type="submit" class="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500 text-red-400 rounded-lg transition-all" title="Remover del carrito">
+                      <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- SECCIÓN DEL HISTORIAL: Órdenes de compra anteriores -->
+      <div class="bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl">
+        <h2 class="font-title font-bold text-xl text-white mb-6 flex items-center gap-2">
+          <i data-lucide="history" class="text-spotify-orange w-5 h-5"></i>
+          <span>Historial de Compras Realizadas</span>
+        </h2>
+
+        <% if (history.length === 0) { %>
+          <div class="text-center py-10 text-gray-500">
+            <i data-lucide="receipt" class="w-10 h-10 mx-auto text-gray-600 mb-2"></i>
+            <p class="text-sm font-medium">Aún no registras pedidos completados en el taller.</p>
+          </div>
+        <% } else { %>
+          <div class="space-y-4">
+            <% history.forEach((order, idx) => { %>
+              <div class="bg-spotify-black border border-spotify-highlight/40 rounded-xl overflow-hidden shadow">
+                <!-- Encabezado del Acordeón -->
+                <button 
+                  type="button"
+                  onclick="toggleAccordion('order-<%= order.id %>')"
+                  class="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-spotify-highlight/20 transition-colors outline-none"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                      <i data-lucide="check" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <span class="block text-xs text-gray-500 font-bold uppercase">Pedido #<%= history.length - idx %></span>
+                      <span class="block text-xs text-gray-400 mt-0.5">Fecha: <%= new Date(order.updatedAt).toLocaleString('es-ES') %></span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center gap-4">
+                    <span class="text-sm font-extrabold text-emerald-400">$<%= parseFloat(order.total).toFixed(2) %></span>
+                    <i data-lucide="chevron-down" id="icon-order-<%= order.id %>" class="w-4 h-4 text-gray-400 transform transition-transform duration-200"></i>
+                  </div>
+                </button>
+
+                <!-- Detalle del Pedido Desplegable -->
+                <div id="order-<%= order.id %>" class="hidden border-t border-spotify-highlight/20 bg-spotify-dark/40 px-5 py-4 animate-[fadeIn_0.2s_ease-out]">
+                  <ul class="space-y-3 divide-y divide-spotify-highlight/20">
+                    <% order.items.forEach(item => { %>
+                      <div class="flex items-center justify-between pt-3 first:pt-0 gap-4 text-xs font-semibold">
+                        <div>
+                          <strong class="text-white"><%= item.product ? item.product.name : 'Repuesto Descatalogado' %></strong>
+                          <div class="text-[10px] text-spotify-orange font-mono mt-0.5">SKU: <%= item.product ? item.product.sku : item.productId.substring(0,8) %></div>
+                        </div>
+                        <div class="text-right whitespace-nowrap">
+                          <span class="text-gray-400"><%= item.quantity %> uds x $<%= parseFloat(item.price).toFixed(2) %></span>
+                          <span class="block text-white font-bold">$<%= (parseFloat(item.price) * item.quantity).toFixed(2) %></span>
+                        </div>
+                      </div>
+                    <% }) %>
+                  </ul>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+
+    </div>
+
+    <!-- COLUMNA DERECHA: Resumen de Factura / Checkout -->
+    <div class="lg:col-span-4">
+      <div class="bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl sticky top-[90px] space-y-6">
+        <h2 class="font-title font-bold text-lg text-white pb-3 border-b border-spotify-highlight/40">Resumen de Compra</h2>
+        
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between text-gray-400">
+            <span>Subtotal de repuestos</span>
+            <span class="font-bold text-white">$<%= parseFloat(cart.total).toFixed(2) %></span>
+          </div>
+          <div class="flex justify-between text-gray-400">
+            <span>Servicio de envío</span>
+            <span class="text-emerald-400 font-bold uppercase">Gratuito</span>
+          </div>
+          <div class="flex justify-between text-gray-400">
+            <span>Impuestos (IVA 12%)</span>
+            <span class="text-gray-500 font-medium">Incluido</span>
+          </div>
+
+          <div class="border-t border-spotify-highlight/40 pt-4 flex justify-between items-center text-base font-extrabold text-white">
+            <span>Total a pagar</span>
+            <span class="text-spotify-orange text-lg">$<%= parseFloat(cart.total).toFixed(2) %></span>
+          </div>
+        </div>
+
+        <% if (items.length > 0) { %>
+          <form action="/cart/checkout" method="POST" class="pt-2">
+            <button 
+              type="submit" 
+              class="w-full flex items-center justify-center gap-2.5 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-sm font-bold py-3.5 px-4 rounded-xl shadow-lg hover:shadow-spotify-orange/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 outline-none"
+            >
+              <i data-lucide="credit-card" class="w-4 h-4"></i>
+              <span>Finalizar Compra</span>
+            </button>
+          </form>
+        <% } else { %>
+          <button 
+            disabled 
+            class="w-full flex items-center justify-center gap-2 bg-spotify-highlight/50 text-gray-500 text-sm font-bold py-3.5 px-4 rounded-xl cursor-not-allowed border border-spotify-highlight/30 select-none"
+          >
+            <i data-lucide="lock" class="w-4 h-4"></i>
+            <span>Carrito sin Artículos</span>
+          </button>
+        <% } %>
+
+        <div class="bg-spotify-black/40 p-4 rounded-xl border border-spotify-highlight/40 text-[11px] text-gray-500 leading-relaxed flex gap-2">
+          <i data-lucide="shield-check" class="text-emerald-400 w-4 h-4 flex-shrink-0 mt-0.5"></i>
+          <p>
+            Su compra reduce automáticamente el stock del taller y genera un pedido para confirmación inmediata del despachador.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Control interactivo para desplegar acordeones de pedidos históricos
+  function toggleAccordion(id) {
+    const detailPanel = document.getElementById(id);
+    const chevronIcon = document.getElementById('icon-' + id);
+    
+    if (detailPanel.classList.contains('hidden')) {
+      detailPanel.classList.remove('hidden');
+      chevronIcon.classList.add('rotate-180');
+    } else {
+      detailPanel.classList.add('hidden');
+      chevronIcon.classList.remove('rotate-180');
+    }
+  }
+</script>
+
+<%- include('partials/footer') %>

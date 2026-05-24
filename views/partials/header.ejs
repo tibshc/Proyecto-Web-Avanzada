@@ -1,50 +1,117 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %> | Repuestos Pesados</title>
-  <!-- Hojas de estilo locales -->
-  <link rel="stylesheet" href="/css/styles.css">
-  <!-- Lucide Icons para una estética ultra moderna -->
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS v3 CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Configuración personalizada de Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            spotify: {
+              black: '#121212',
+              dark: '#181818',
+              card: '#242424',
+              highlight: '#2a2a2a',
+              orange: '#f97316',
+              orangeHover: '#ea580c'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            title: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Estilos personalizados adicionales para scrollbars y efectos finos */
+    body {
+      background-color: #121212;
+      color: #e5e7eb;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #121212;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2a2a2a;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3e3e3e;
+    }
+  </style>
 </head>
-<body>
-  <div class="app-container">
-    <nav class="navbar">
-      <a href="/" class="navbar-brand">
-        <i data-lucide="truck" class="brand-icon"></i>
-        <span>RepuestosPesados</span>
+<body class="flex flex-col min-h-full font-sans antialiased text-gray-200">
+  <div class="flex flex-col flex-1">
+    <!-- Navbar Premium Estilo macOS/Spotify -->
+    <nav class="sticky top-0 z-50 bg-spotify-dark/80 backdrop-blur-md border-b border-spotify-highlight/40 px-6 py-4 flex justify-between items-center transition-all">
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="bg-spotify-orange/10 p-2 rounded-lg border border-spotify-orange/30 group-hover:border-spotify-orange group-hover:bg-spotify-orange/20 transition-all duration-300">
+          <i data-lucide="truck" class="text-spotify-orange w-6 h-6 filter drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]"></i>
+        </div>
+        <span class="font-title font-extrabold text-xl tracking-tight text-white group-hover:text-spotify-orange transition-colors">
+          Repuestos<span class="text-spotify-orange">Pesados</span>
+        </span>
       </a>
-      <ul class="navbar-nav">
+
+      <ul class="flex items-center gap-6 list-none">
         <% if (locals.user) { %>
           <li>
-            <a href="/dashboard" class="nav-link <%= title.includes('Catálogo') ? 'active' : '' %>">
-              <i data-lucide="layers" style="vertical-align: middle; margin-right: 4px;"></i> Inventario
+            <a href="/dashboard" class="flex items-center gap-2 text-sm font-semibold transition-all duration-200 px-3 py-2 rounded-lg <%= title.includes('Catálogo') ? 'text-white bg-spotify-highlight' : 'text-gray-400 hover:text-white hover:bg-spotify-highlight/50' %>">
+              <i data-lucide="layers" class="w-4 h-4"></i> Inventario
             </a>
           </li>
           <li>
-            <a href="/chat" class="nav-link <%= title.includes('Soporte') ? 'active' : '' %>">
-              <i data-lucide="message-square" style="vertical-align: middle; margin-right: 4px;"></i> Soporte en Vivo
+            <a href="/chat" class="flex items-center gap-2 text-sm font-semibold transition-all duration-200 px-3 py-2 rounded-lg <%= title.includes('Soporte') ? 'text-white bg-spotify-highlight' : 'text-gray-400 hover:text-white hover:bg-spotify-highlight/50' %>">
+              <i data-lucide="message-square" class="w-4 h-4"></i> Soporte en Vivo
             </a>
           </li>
-          <li class="user-tag">
-            <i data-lucide="user" size="14"></i>
-            <span><%= user.name %> (<%= user.role === 'support' ? 'Soporte' : 'Mecánico' %>)</span>
+          <li>
+            <a href="/cart" class="relative flex items-center gap-2 text-sm font-semibold transition-all duration-200 px-3 py-2 rounded-lg <%= title.includes('Carrito') ? 'text-white bg-spotify-highlight' : 'text-gray-400 hover:text-white hover:bg-spotify-highlight/50' %>">
+              <i data-lucide="shopping-cart" class="w-4.5 h-4.5 text-spotify-orange"></i> Carrito
+              <% if (locals.cartCount && locals.cartCount > 0) { %>
+                <span class="absolute -top-1 -right-1 bg-spotify-orange text-white text-[9px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center border border-spotify-dark animate-bounce">
+                  <%= cartCount %>
+                </span>
+              <% } %>
+            </a>
+          </li>
+          <li class="flex items-center gap-2 text-xs font-bold text-spotify-orange bg-spotify-orange/10 border border-spotify-orange/20 px-3 py-1.5 rounded-full select-none">
+            <span class="w-1.5 h-1.5 rounded-full bg-spotify-orange animate-pulse"></span>
+            <span><%= user.name %> (<%= user.role === 'support' ? 'Soporte' : (user.role === 'admin' ? 'Admin' : 'Mecánico') %>)</span>
           </li>
           <li>
-            <a href="/auth/logout" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
-              <i data-lucide="log-out" size="14" style="vertical-align: middle;"></i> Salir
+            <a href="/auth/logout" class="flex items-center gap-2 bg-spotify-highlight hover:bg-spotify-card border border-spotify-highlight hover:border-gray-600 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-250">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Salir
             </a>
           </li>
         <% } else { %>
           <li>
-            <a href="/auth/login" class="nav-link <%= title.includes('Iniciar') ? 'active' : '' %>">Ingresar</a>
+            <a href="/auth/login" class="text-sm font-bold text-gray-400 hover:text-white transition-colors <%= title.includes('Iniciar') ? 'text-white' : '' %>">Ingresar</a>
           </li>
           <li>
-            <a href="/auth/register" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Registrarse</a>
+            <a href="/auth/register" class="bg-spotify-orange hover:bg-spotify-orangeHover text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-lg hover:shadow-spotify-orange/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">
+              Registrarse
+            </a>
           </li>
         <% } %>
       </ul>
     </nav>
-    <main class="main-content">
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 max-w-7xl mx-auto w-full px-6 py-8">

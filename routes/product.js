@@ -3,16 +3,16 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const { isAuthenticated, authorizeRoles } = require('../middlewares/authMiddleware');
 
-// Ver catálogo de repuestos (Acceso para cualquier usuario autenticado: admin, mechanic, support)
+// Ver catálogo de repuestos (Acceso general para usuarios logueados)
 router.get('/', isAuthenticated, productController.getAllProducts);
 
-// Crear nuevo repuesto (Solo Admin y Soporte Técnico pueden registrar piezas)
+// Crear nuevo repuesto (Admin y Soporte Técnico)
 router.post('/products', isAuthenticated, authorizeRoles(['admin', 'support']), productController.createProduct);
 
-// Actualizar un repuesto existente
+// Actualizar un repuesto existente (Admin y Soporte Técnico)
 router.post('/products/edit/:id', isAuthenticated, authorizeRoles(['admin', 'support']), productController.updateProduct);
 
-// Eliminar un repuesto del catálogo (Solo Admin puede eliminar permanentemente)
+// Eliminar un repuesto del catálogo (Solo Admin)
 router.post('/products/delete/:id', isAuthenticated, authorizeRoles(['admin']), productController.deleteProduct);
 
 module.exports = router;

@@ -18,7 +18,7 @@ io.on('connection', (socket) => {
   console.log(`🔌 Nuevo cliente conectado: ${socket.id}`);
 
   // Recibir mensajes de chat desde el cliente
-  socket.on('chatMessage', (messageData) => {
+  socket.on('chat_message', (messageData) => {
     // Validar mensaje entrante
     if (messageData && messageData.text.trim()) {
       // Re-transmitir el mensaje a TODOS los clientes conectados en la sala

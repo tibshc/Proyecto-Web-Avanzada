@@ -2,13 +2,14 @@ const express = require('express');
 const path = require('path');
 const session = require('express-session');
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
-const { sequelize } = require('./models');
+const { sequelize, Cart, CartItem } = require('./models');
 require('dotenv').config();
 
 // Importación de Rutas
-const authRoutes = require('./routes/authRoutes');
-const dashboardRoutes = require('./routes/dashboardRoutes');
+const authRoutes = require('./routes/auth');
+const dashboardRoutes = require('./routes/product');
 const chatRoutes = require('./routes/chatRoutes');
+const cartRoutes = require('./routes/cart');
 
 const app = express();
 
@@ -45,8 +46,30 @@ app.use(session({
 sessionStore.sync();
 
 // Middleware Global para pasar variables locales a todas las vistas EJS
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
+  
+  // Si el usuario está logueado, contar artículos en su carrito activo
+  if (req.session && req.session.user) {
+    try {
+      const activeCart = await Cart.findOne({
+        where: { userId: req.session.user.id, status: 'active' }
+      });
+      if (activeCart) {
+        const count = await CartItem.sum('quantity', {
+          where: { cartId: activeCart.id }
+        });
+        res.locals.cartCount = count || 0;
+      } else {
+        res.locals.cartCount = 0;
+      }
+    } catch (err) {
+      console.error('Error al calcular cantidad del carrito en middleware:', err);
+      res.locals.cartCount = 0;
+    }
+  } else {
+    res.locals.cartCount = 0;
+  }
   next();
 });
 
@@ -54,6 +77,7 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/chat', chatRoutes);
+app.use('/cart', cartRoutes);
 
 // Ruta Raíz: Redirige automáticamente al panel principal
 app.get('/', (req, res) => {
