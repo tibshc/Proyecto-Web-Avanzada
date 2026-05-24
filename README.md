@@ -82,6 +82,16 @@ Hemos incluido un archivo `docker-compose.yml` para facilitar el levantamiento d
    ```
 4. Los valores por defecto de `.env` ya coinciden con la configuración de Docker, por lo que **no necesitas modificar nada** si utilizas la base de datos dockerizada.
 
+### 2.5 Poblar la Base de Datos (Opcional - Seed)
+Para rellenar la base de datos con usuarios de prueba (Administrador, Soporte, Mecánico) y un catálogo inicial de repuestos pesados, ejecuta el script de sembrado:
+```bash
+npm run seed
+```
+*Credenciales de prueba generadas:*
+- **Administrador**: `admin@repuestos.com` (Contraseña: `password123`)
+- **Soporte Técnico**: `soporte@repuestos.com` (Contraseña: `password123`)
+- **Mecánico**: `mecanico@repuestos.com` (Contraseña: `password123`)
+
 ### 3. Ejecutar en Modo de Desarrollo
 Arranca el servidor en modo desarrollo utilizando `nodemon` para que se reinicie automáticamente con cada cambio en el código:
 ```bash
