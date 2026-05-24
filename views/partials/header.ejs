@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Repuestos Pesados</title>
+  <!-- Hojas de estilo locales -->
+  <link rel="stylesheet" href="/css/styles.css">
+  <!-- Lucide Icons para una estética ultra moderna -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+    <nav class="navbar">
+      <a href="/" class="navbar-brand">
+        <i data-lucide="truck" class="brand-icon"></i>
+        <span>RepuestosPesados</span>
+      </a>
+      <ul class="navbar-nav">
+        <% if (locals.user) { %>
+          <li>
+            <a href="/dashboard" class="nav-link <%= title.includes('Catálogo') ? 'active' : '' %>">
+              <i data-lucide="layers" style="vertical-align: middle; margin-right: 4px;"></i> Inventario
+            </a>
+          </li>
+          <li>
+            <a href="/chat" class="nav-link <%= title.includes('Soporte') ? 'active' : '' %>">
+              <i data-lucide="message-square" style="vertical-align: middle; margin-right: 4px;"></i> Soporte en Vivo
+            </a>
+          </li>
+          <li class="user-tag">
+            <i data-lucide="user" size="14"></i>
+            <span><%= user.name %> (<%= user.role === 'support' ? 'Soporte' : 'Mecánico' %>)</span>
+          </li>
+          <li>
+            <a href="/auth/logout" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+              <i data-lucide="log-out" size="14" style="vertical-align: middle;"></i> Salir
+            </a>
+          </li>
+        <% } else { %>
+          <li>
+            <a href="/auth/login" class="nav-link <%= title.includes('Iniciar') ? 'active' : '' %>">Ingresar</a>
+          </li>
+          <li>
+            <a href="/auth/register" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Registrarse</a>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
+    <main class="main-content">

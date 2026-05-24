@@ -1,0 +1,66 @@
+<%- include('partials/header') %>
+
+<div style="margin-bottom: 2rem;">
+  <h1 style="font-size: 2.2rem; font-family: var(--font-title); margin-bottom: 0.5rem;">Soporte Técnico en Vivo</h1>
+  <p style="color: var(--text-secondary);">Consulta compatibilidad, especificaciones y disponibilidad directamente con el equipo de soporte técnico en tiempo real.</p>
+</div>
+
+<div class="glass-card" style="padding: 1.5rem; max-width: 1000px; margin: 0 auto;">
+  <div class="chat-container">
+    <!-- Encabezado de la Sala -->
+    <div class="chat-header">
+      <div style="display: flex; align-items: center; gap: 0.8rem;">
+        <i data-lucide="message-square" style="color: var(--accent);"></i>
+        <h3 style="font-size: 1.1rem; font-family: var(--font-title);">Canal de Soporte Directo</h3>
+      </div>
+      <div class="chat-status">
+        <div class="status-dot"></div>
+        <span>Canal Activo (Tiempo Real)</span>
+      </div>
+    </div>
+
+    <!-- Contenedor de Mensajes -->
+    <div class="chat-messages" id="chat-messages">
+      <!-- Mensaje de bienvenida inicial del sistema -->
+      <div class="message-bubble message-incoming">
+        <div class="message-meta">
+          <span class="message-sender">Sistema de Soporte</span>
+        </div>
+        <div class="message-text">
+          ¡Hola <%= user.name %>! Has ingresado al chat de soporte de repuestos. Escribe tu consulta y un especialista o compañero mecánico te responderá a la brevedad.
+        </div>
+        <div class="message-time">
+          <%= new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulario para Enviar Mensajes -->
+    <div class="chat-footer">
+      <form class="chat-form" id="chat-form">
+        <!-- Inputs ocultos para identificación del usuario por Socket.IO client-side -->
+        <input type="hidden" id="user-name" value="<%= user.name %>">
+        <input type="hidden" id="user-role" value="<%= user.role %>">
+
+        <input 
+          type="text" 
+          id="message-input" 
+          class="form-control" 
+          placeholder="Escriba su mensaje sobre compatibilidad de repuestos..." 
+          autocomplete="off" 
+          required
+        >
+        
+        <button type="submit" class="btn btn-primary">
+          <i data-lucide="send"></i> Enviar
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts requeridos: Primero Socket.IO (servido por el backend) y luego el script local -->
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/chat-client.js"></script>
+
+<%- include('partials/footer') %>

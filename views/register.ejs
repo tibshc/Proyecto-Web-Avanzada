@@ -1,0 +1,52 @@
+<%- include('partials/header') %>
+
+<div class="auth-wrapper">
+  <div class="glass-card auth-card">
+    <div class="auth-header">
+      <h2>Crear Cuenta</h2>
+      <p>Regístrate en el portal técnico de repuestos</p>
+    </div>
+
+    <% if (locals.error) { %>
+      <div class="alert alert-error">
+        <i data-lucide="alert-triangle"></i>
+        <span><%= error %></span>
+      </div>
+    <% } %>
+
+    <form action="/auth/register" method="POST">
+      <div class="form-group">
+        <label for="name" class="form-label">Nombre Completo</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="Ej. Juan Pérez" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email" class="form-label">Correo Electrónico</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="juan.perez@empresa.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Contraseña</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Mínimo 6 caracteres" required>
+      </div>
+
+      <div class="form-group">
+        <label for="role" class="form-label">Rol en la Empresa</label>
+        <select id="role" name="role" class="form-control" required>
+          <option value="mechanic">Mecánico de Flota / Taller</option>
+          <option value="support">Soporte Técnico / Especialista</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">
+        <i data-lucide="user-plus"></i> Registrar Cuenta
+      </button>
+    </form>
+
+    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+      <p style="color: var(--text-secondary);">¿Ya tienes una cuenta? <a href="/auth/login">Inicia sesión aquí</a></p>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

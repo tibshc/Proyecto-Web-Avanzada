@@ -1,0 +1,322 @@
+<%- include('partials/header') %>
+
+<div style="margin-bottom: 2rem;">
+  <h1 style="font-size: 2.2rem; font-family: var(--font-title); margin-bottom: 0.5rem;">Panel de Repuestos de Carga Pesada</h1>
+  <p style="color: var(--text-secondary);">Inventario activo para chasis, motores y sistemas de frenado para camiones y buses comerciales.</p>
+</div>
+
+<% if (locals.error) { %>
+  <div class="alert alert-error">
+    <i data-lucide="alert-triangle"></i>
+    <span><%= error %></span>
+  </div>
+<% } %>
+
+<% if (locals.success) { %>
+  <div class="alert alert-success">
+    <i data-lucide="check-circle-2"></i>
+    <span><%= success %></span>
+  </div>
+<% } %>
+
+<div class="dashboard-grid">
+  <!-- COLUMNA IZQUIERDA: Formulario de Creación/Edición (Solo visible para Admin y Soporte) -->
+  <% if (user.role === 'admin' || user.role === 'support') { %>
+    <div class="glass-card" style="position: sticky; top: 90px;">
+      <h2 id="form-title" style="font-size: 1.4rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; color: var(--accent);">
+        <i data-lucide="plus-circle" id="form-icon"></i>
+        <span>Registrar Repuesto</span>
+      </h2>
+
+      <form id="product-form" action="/dashboard/products" method="POST">
+        <!-- Input oculto para edición -->
+        <input type="hidden" id="product-id" name="id">
+
+        <div class="form-group">
+          <label for="sku" class="form-label">Código SKU</label>
+          <input type="text" id="sku" name="sku" class="form-control" placeholder="Ej. VOL-FH16-CH10" required>
+        </div>
+
+        <div class="form-group">
+          <label for="name" class="form-label">Nombre del Repuesto</label>
+          <input type="text" id="name" name="name" class="form-control" placeholder="Ej. Amortiguador Delantero Neumático" required>
+        </div>
+
+        <div class="form-group">
+          <label for="category" class="form-label">Categoría</label>
+          <select id="category" name="category" class="form-control" required>
+            <option value="chasis">Chasis y Suspensión</option>
+            <option value="motor">Motor y Transmisión</option>
+            <option value="frenos">Sistema de Frenos</option>
+            <option value="otros">Otros Componentes</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="brand" class="form-label">Marca</label>
+          <input type="text" id="brand" name="brand" class="form-control" placeholder="Ej. Volvo Genuine / Sachs" required>
+        </div>
+
+        <div class="form-group">
+          <label for="compatibility" class="form-label">Compatibilidad (Modelos)</label>
+          <textarea id="compatibility" name="compatibility" class="form-control" rows="2" placeholder="Ej. Volvo FH16, Volvo FM12 (Buses/Camiones)"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="durabilityKm" class="form-label">Durabilidad (Km)</label>
+            <input type="number" id="durabilityKm" name="durabilityKm" class="form-control" value="120000" min="0" required>
+          </div>
+          <div class="form-group">
+            <label for="stock" class="form-label">Stock Inicial</label>
+            <input type="number" id="stock" name="stock" class="form-control" value="10" min="0" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="price" class="form-label">Precio Unitario ($ USD)</label>
+          <input type="number" id="price" name="price" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+        </div>
+
+        <h3 style="font-size: 0.9rem; margin: 1.5rem 0 1rem 0; text-transform: uppercase; color: var(--text-secondary); border-bottom: 1px solid var(--border-glass); padding-bottom: 0.3rem;">
+          Especificaciones Técnicas (JSON)
+        </h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem;">
+          <div>
+            <label for="torque_nm" class="form-label" style="font-size: 0.75rem;">Torque (Nm)</label>
+            <input type="text" id="torque_nm" name="torque_nm" class="form-control" placeholder="N/A" style="padding: 0.5rem;">
+          </div>
+          <div>
+            <label for="dimensions" class="form-label" style="font-size: 0.75rem;">Dimensiones</label>
+            <input type="text" id="dimensions" name="dimensions" class="form-control" placeholder="N/A" style="padding: 0.5rem;">
+          </div>
+          <div>
+            <label for="weight_kg" class="form-label" style="font-size: 0.75rem;">Peso (Kg)</label>
+            <input type="text" id="weight_kg" name="weight_kg" class="form-control" placeholder="N/A" style="padding: 0.5rem;">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" id="submit-btn" class="btn btn-primary" style="flex: 1;">
+            <i data-lucide="check"></i> Guardar Repuesto
+          </button>
+          <button type="button" id="cancel-edit-btn" class="btn btn-secondary" style="display: none;">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  <% } else { %>
+    <!-- Si es mecánico, una tarjeta informativa premium sobre soporte técnico -->
+    <div class="glass-card" style="position: sticky; top: 90px;">
+      <h2 style="font-size: 1.4rem; margin-bottom: 1rem; color: var(--accent); display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="wrench"></i>
+        <span>Vista de Mecánico</span>
+      </h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+        Como mecánico de flota, tienes acceso completo de lectura al catálogo general de repuestos para verificar existencias, precios y compatibilidad con camiones de carga pesada.
+      </p>
+      <div style="border-left: 3px solid var(--accent); padding-left: 1rem; margin-bottom: 1.5rem;">
+        <p style="font-size: 0.85rem; font-style: italic; color: var(--text-muted);">
+          "¿Tienes dudas sobre la compatibilidad de una pieza o necesitas una especificación a medida?"
+        </p>
+      </div>
+      <a href="/chat" class="btn btn-primary btn-block">
+        <i data-lucide="message-square"></i> Consultar a Soporte
+      </a>
+    </div>
+  <% } %>
+
+  <!-- COLUMNA DERECHA: Catálogo / Tabla -->
+  <div class="glass-card">
+    <h2 style="font-size: 1.6rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+      <span>Catálogo Disponible</span>
+      <span style="font-size: 0.9rem; background-color: var(--border-glass); padding: 0.3rem 0.8rem; border-radius: 12px; font-weight: normal; color: var(--text-secondary);">
+        <%= products.length %> Repuesto(s)
+      </span>
+    </h2>
+
+    <% if (products.length === 0) { %>
+      <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
+        <i data-lucide="package-search" size="48" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
+        <p>No hay repuestos registrados en el inventario.</p>
+        <% if (user.role === 'admin' || user.role === 'support') { %>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">Utiliza el formulario de la izquierda para registrar la primera pieza.</p>
+        <% } %>
+      </div>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>SKU / Repuesto</th>
+              <th>Categoría</th>
+              <th>Compatibilidad</th>
+              <th>Especificaciones</th>
+              <th>Vida Útil (Km)</th>
+              <th>Stock</th>
+              <th>Precio</th>
+              <% if (user.role === 'admin' || user.role === 'support') { %>
+                <th style="text-align: right;">Acciones</th>
+              <% } %>
+            </tr>
+          </thead>
+          <tbody>
+            <% products.forEach(product => { %>
+              <tr>
+                <td>
+                  <strong style="color: var(--text-primary); font-size: 0.95rem;"><%= product.name %></strong>
+                  <div style="font-size: 0.75rem; color: var(--accent); font-family: monospace; margin-top: 0.2rem;">SKU: <%= product.sku %></div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.1rem;">Marca: <%= product.brand %></div>
+                </td>
+                <td>
+                  <span class="product-badge badge-<%= product.category %>"><%= product.category %></span>
+                </td>
+                <td style="max-width: 200px; font-size: 0.85rem;">
+                  <%= product.compatibility || 'No especificada' %>
+                </td>
+                <td>
+                  <ul class="specs-list">
+                    <% if (product.technicalSpecs) { %>
+                      <li><span class="specs-label">Torque:</span> <%= product.technicalSpecs.torque_nm || 'N/A' %></li>
+                      <li><span class="specs-label">Dim:</span> <%= product.technicalSpecs.dimensions || 'N/A' %></li>
+                      <li><span class="specs-label">Peso:</span> <%= product.technicalSpecs.weight_kg || 'N/A' %></li>
+                    <% } else { %>
+                      <li class="specs-label">Sin especificaciones</li>
+                    <% } %>
+                  </ul>
+                </td>
+                <td style="font-weight: 500; color: var(--text-primary);">
+                  <%= (product.durabilityKm || 0).toLocaleString() %> km
+                </td>
+                <td style="font-weight: 600; color: <%= product.stock <= 5 ? 'var(--error)' : 'var(--text-primary)' %>;">
+                  <%= product.stock %> uds
+                </td>
+                <td style="font-weight: 700; color: var(--success);">
+                  $<%= parseFloat(product.price).toFixed(2) %>
+                </td>
+                <% if (user.role === 'admin' || user.role === 'support') { %>
+                  <td style="text-align: right;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                      <button 
+                        class="btn btn-secondary edit-btn" 
+                        style="padding: 0.4rem; border-radius: 6px;"
+                        data-id="<%= product.id %>"
+                        data-sku="<%= product.sku %>"
+                        data-name="<%= product.name %>"
+                        data-category="<%= product.category %>"
+                        data-brand="<%= product.brand %>"
+                        data-compatibility="<%= product.compatibility %>"
+                        data-durability="<%= product.durabilityKm %>"
+                        data-stock="<%= product.stock %>"
+                        data-price="<%= product.price %>"
+                        data-torque="<%= product.technicalSpecs ? product.technicalSpecs.torque_nm : '' %>"
+                        data-dimensions="<%= product.technicalSpecs ? product.technicalSpecs.dimensions : '' %>"
+                        data-weight="<%= product.technicalSpecs ? product.technicalSpecs.weight_kg : '' %>"
+                        title="Editar Repuesto"
+                      >
+                        <i data-lucide="edit" size="14"></i>
+                      </button>
+                      
+                      <% if (user.role === 'admin') { %>
+                        <form action="/dashboard/products/delete/<%= product.id %>" method="POST" onsubmit="return confirm('¿Está seguro de eliminar este repuesto de forma permanente?');">
+                          <button type="submit" class="btn btn-danger" style="padding: 0.4rem; border-radius: 6px;" title="Eliminar Repuesto">
+                            <i data-lucide="trash-2" size="14"></i>
+                          </button>
+                        </form>
+                      <% } %>
+                    </div>
+                  </td>
+                <% } %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Lógica dinámica en el frontend para el formulario CRUD de Repuestos -->
+<% if (user.role === 'admin' || user.role === 'support') { %>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const editButtons = document.querySelectorAll('.edit-btn');
+      const productForm = document.getElementById('product-form');
+      const formTitle = document.getElementById('form-title').querySelector('span');
+      const formIcon = document.getElementById('form-icon');
+      const submitBtn = document.getElementById('submit-btn');
+      const cancelEditBtn = document.getElementById('cancel-edit-btn');
+
+      // Campos del Formulario
+      const productIdInput = document.getElementById('product-id');
+      const skuInput = document.getElementById('sku');
+      const nameInput = document.getElementById('name');
+      const categoryInput = document.getElementById('category');
+      const brandInput = document.getElementById('brand');
+      const compatibilityInput = document.getElementById('compatibility');
+      const durabilityInput = document.getElementById('durabilityKm');
+      const stockInput = document.getElementById('stock');
+      const priceInput = document.getElementById('price');
+      const torqueInput = document.getElementById('torque_nm');
+      const dimensionsInput = document.getElementById('dimensions');
+      const weightInput = document.getElementById('weight_kg');
+
+      // Manejar clic en botón Editar
+      editButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const id = button.getAttribute('data-id');
+          
+          // Llenar formulario con valores guardados en los data-attributes
+          productIdInput.value = id;
+          skuInput.value = button.getAttribute('data-sku');
+          skuInput.setAttribute('disabled', 'true'); // No permitir cambiar el SKU en la edición
+          nameInput.value = button.getAttribute('data-name');
+          categoryInput.value = button.getAttribute('data-category');
+          brandInput.value = button.getAttribute('data-brand');
+          compatibilityInput.value = button.getAttribute('data-compatibility');
+          durabilityInput.value = button.getAttribute('data-durability');
+          stockInput.value = button.getAttribute('data-stock');
+          priceInput.value = button.getAttribute('data-price');
+          torqueInput.value = button.getAttribute('data-torque');
+          dimensionsInput.value = button.getAttribute('data-dimensions');
+          weightInput.value = button.getAttribute('data-weight');
+
+          // Cambiar acción del formulario para apuntar al endpoint de actualización
+          productForm.setAttribute('action', `/dashboard/products/edit/${id}`);
+
+          // Ajustar elementos visuales
+          formTitle.textContent = 'Editar Repuesto';
+          formIcon.setAttribute('data-lucide', 'edit-3');
+          submitBtn.innerHTML = '<i data-lucide="save"></i> Actualizar Repuesto';
+          cancelEditBtn.style.display = 'inline-flex';
+          
+          lucide.createIcons(); // Recargar iconos
+          
+          // Hacer scroll suave hacia el formulario
+          productForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      });
+
+      // Restaurar formulario al estado de Creación
+      const resetForm = () => {
+        productIdInput.value = '';
+        productForm.reset();
+        skuInput.removeAttribute('disabled');
+        productForm.setAttribute('action', '/dashboard/products');
+        
+        formTitle.textContent = 'Registrar Repuesto';
+        formIcon.setAttribute('data-lucide', 'plus-circle');
+        submitBtn.innerHTML = '<i data-lucide="check"></i> Guardar Repuesto';
+        cancelEditBtn.style.display = 'none';
+        
+        lucide.createIcons();
+      };
+
+      cancelEditBtn.addEventListener('click', resetForm);
+    });
+  </script>
+<% } %>
+
+<%- include('partials/footer') %>

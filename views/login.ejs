@@ -1,0 +1,47 @@
+<%- include('partials/header') %>
+
+<div class="auth-wrapper">
+  <div class="glass-card auth-card">
+    <div class="auth-header">
+      <h2>Bienvenido al Sistema</h2>
+      <p>Gestión de Repuestos y Soporte en Vivo</p>
+    </div>
+
+    <% if (locals.error) { %>
+      <div class="alert alert-error">
+        <i data-lucide="alert-triangle"></i>
+        <span><%= error %></span>
+      </div>
+    <% } %>
+
+    <% if (locals.success) { %>
+      <div class="alert alert-success">
+        <i data-lucide="check-circle-2"></i>
+        <span><%= success %></span>
+      </div>
+    <% } %>
+
+    <form action="/auth/login" method="POST">
+      <div class="form-group">
+        <label for="email" class="form-label">Correo Electrónico</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="ejemplo@empresa.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Contraseña</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">
+        <i data-lucide="log-in"></i> Iniciar Sesión
+      </button>
+    </form>
+
+    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+      <p style="color: var(--text-secondary);">¿No tienes una cuenta? <a href="/auth/register">Regístrate aquí</a></p>
+      <p style="margin-top: 0.5rem;"><a href="/auth/reset-password" style="font-size: 0.85rem; color: var(--text-muted);">¿Olvidaste tu contraseña?</a></p>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
