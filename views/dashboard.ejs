@@ -1,449 +1,487 @@
 <%- include('partials/header') %>
 
-<div class="space-y-8 animate-[fadeIn_0.5s_ease-out]">
-  <!-- Encabezado del Dashboard -->
-  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-spotify-highlight/40 pb-6">
-    <div>
-      <h1 class="font-title font-extrabold text-3xl tracking-tight text-white">Panel de Repuestos Comerciales</h1>
-      <p class="text-sm text-gray-400 mt-1">Inventario activo y control de piezas para vehículos de carga pesada y buses.</p>
-    </div>
-    <% if (locals.success) { %>
-      <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2.5 rounded-xl text-sm">
-        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-        <span><%= success %></span>
+  <div class="space-y-8 animate-[fadeIn_0.5s_ease-out]">
+    <!-- Encabezado del Dashboard -->
+    <div
+      class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-spotify-highlight/40 pb-6">
+      <div>
+        <h1 class="font-title font-extrabold text-3xl tracking-tight text-white">Panel de Repuestos Comerciales</h1>
+        <p class="text-sm text-gray-400 mt-1">Inventario activo y control de piezas para vehículos de carga pesada y
+          buses.</p>
       </div>
-    <% } %>
-    <% if (locals.error) { %>
-      <div class="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2.5 rounded-xl text-sm animate-pulse">
-        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-        <span><%= error %></span>
-      </div>
-    <% } %>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-    
-    <!-- COLUMNA IZQUIERDA: Formulario de Operaciones (Oculto para mecánicos) -->
-    <div class="lg:col-span-4 space-y-6">
-      <% if (user.role === 'admin' || user.role === 'support') { %>
-        <div class="bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
-          <h2 id="form-title" class="font-title font-bold text-lg text-white mb-6 flex items-center gap-2">
-            <i data-lucide="plus-circle" id="form-icon" class="text-spotify-orange w-5 h-5"></i>
-            <span>Registrar Nuevo Repuesto</span>
-          </h2>
-
-          <form id="product-form" action="/dashboard/products" method="POST" class="space-y-4">
-            <!-- ID oculto para edición -->
-            <input type="hidden" id="product-id" name="id">
-
-            <div>
-              <label for="sku" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Código SKU</label>
-              <input 
-                type="text" 
-                id="sku" 
-                name="sku" 
-                required 
-                class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none" 
-                placeholder="Ej. VOL-FH16-CH10"
-              >
-            </div>
-
-            <div>
-              <label for="name" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Nombre de la Pieza</label>
-              <input 
-                type="text" 
-                id="name" 
-                name="name" 
-                required 
-                class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none" 
-                placeholder="Ej. Amortiguador Neumático Posterior"
-              >
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label for="category" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Categoría</label>
-                <div class="relative">
-                  <select 
-                    id="category" 
-                    name="category" 
-                    required 
-                    class="block w-full pl-3 pr-8 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none appearance-none cursor-pointer"
-                  >
-                    <option value="chasis">Chasis</option>
-                    <option value="motor">Motor</option>
-                    <option value="frenos">Frenos</option>
-                    <option value="otros">Otros</option>
-                  </select>
-                  <span class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-spotify-orange">
-                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label for="brand" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Marca</label>
-                <input 
-                  type="text" 
-                  id="brand" 
-                  name="brand" 
-                  required 
-                  class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none" 
-                  placeholder="Ej. Sachs"
-                >
-              </div>
-            </div>
-
-            <div>
-              <label for="compatibility" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Compatibilidad de Modelos</label>
-              <textarea 
-                id="compatibility" 
-                name="compatibility" 
-                rows="2" 
-                class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none resize-none" 
-                placeholder="Ej. Volvo FH16, Volvo FM12 (Camiones)"
-              ></textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label for="durabilityKm" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Durabilidad (Km)</label>
-                <input 
-                  type="number" 
-                  id="durabilityKm" 
-                  name="durabilityKm" 
-                  required 
-                  min="0" 
-                  value="100000" 
-                  class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none"
-                >
-              </div>
-
-              <div>
-                <label for="stock" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Stock Disponible</label>
-                <input 
-                  type="number" 
-                  id="stock" 
-                  name="stock" 
-                  required 
-                  min="0" 
-                  value="5" 
-                  class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none"
-                >
-              </div>
-            </div>
-
-            <div>
-              <label for="price" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Precio Unitario ($ USD)</label>
-              <input 
-                type="number" 
-                id="price" 
-                name="price" 
-                required 
-                min="0" 
-                step="0.01" 
-                placeholder="0.00" 
-                class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none"
-              >
-            </div>
-
-            <!-- Sección de Especificaciones Técnicas JSON -->
-            <div class="border-t border-spotify-highlight/40 pt-4">
-              <span class="block text-xs font-bold uppercase tracking-wider text-spotify-orange mb-3">Especificaciones Técnicas</span>
-              <div class="grid grid-cols-3 gap-2">
-                <div>
-                  <label for="torque_nm" class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Torque (Nm)</label>
-                  <input type="text" id="torque_nm" name="torque_nm" class="block w-full px-2 py-1.5 bg-spotify-black border border-spotify-highlight text-white rounded text-xs transition-all outline-none" placeholder="N/A">
-                </div>
-                <div>
-                  <label for="dimensions" class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Medidas</label>
-                  <input type="text" id="dimensions" name="dimensions" class="block w-full px-2 py-1.5 bg-spotify-black border border-spotify-highlight text-white rounded text-xs transition-all outline-none" placeholder="N/A">
-                </div>
-                <div>
-                  <label for="weight_kg" class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Peso (Kg)</label>
-                  <input type="text" id="weight_kg" name="weight_kg" class="block w-full px-2 py-1.5 bg-spotify-black border border-spotify-highlight text-white rounded text-xs transition-all outline-none" placeholder="N/A">
-                </div>
-              </div>
-            </div>
-
-            <div class="pt-4 flex gap-3">
-              <button 
-                type="submit" 
-                id="submit-btn" 
-                class="flex-1 flex justify-center py-2.5 px-4 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-sm font-bold rounded-xl shadow-lg transition-all outline-none"
-              >
-                Guardar Repuesto
-              </button>
-              <button 
-                type="button" 
-                id="cancel-edit-btn" 
-                class="hidden py-2.5 px-4 bg-spotify-highlight hover:bg-spotify-card border border-spotify-highlight text-white text-sm font-bold rounded-xl transition-all outline-none"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+      <% if (locals.success) { %>
+        <div
+          class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2.5 rounded-xl text-sm">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          <span>
+            <%= success %>
+          </span>
         </div>
-      <% } else { %>
-        <!-- Tarjeta del Rol Mecánico -->
-        <div class="bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl space-y-4">
-          <div class="flex items-center gap-3">
-            <div class="bg-spotify-orange/10 p-2 rounded-xl border border-spotify-orange/20">
-              <i data-lucide="wrench" class="text-spotify-orange w-5 h-5"></i>
+        <% } %>
+          <% if (locals.error) { %>
+            <div
+              class="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2.5 rounded-xl text-sm animate-pulse">
+              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+              <span>
+                <%= error %>
+              </span>
             </div>
-            <h2 class="font-title font-bold text-lg text-white">Vista de Lector</h2>
-          </div>
-          <p class="text-sm text-gray-400 leading-relaxed">
-            Como **Mecánico**, tienes permisos para consultar existencias, marcas, especificaciones técnicas y durabilidad en kilómetros de los repuestos.
-          </p>
-          <div class="bg-spotify-black p-4 rounded-xl border border-spotify-highlight/40">
-            <span class="block text-xs font-bold uppercase tracking-wider text-spotify-orange mb-1">¿Dudas de Compatibilidad?</span>
-            <p class="text-xs text-gray-500 mb-3 leading-relaxed">Consulta a soporte técnico en tiempo real para verificar si la pieza es apta para tu camión.</p>
-            <a href="/chat" class="w-full flex items-center justify-center gap-2 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-xs font-bold py-2.5 px-4 rounded-lg shadow-md hover:-translate-y-0.5 transition-all">
-              <i data-lucide="message-square" class="w-4 h-4"></i> Consultar Soporte
-            </a>
-          </div>
-        </div>
-      <% } %>
+            <% } %>
     </div>
 
-    <!-- COLUMNA DERECHA: Catálogo de Repuestos -->
-    <div class="lg:col-span-8 bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl">
-      <div class="flex items-center justify-between gap-4 mb-6">
-        <h2 class="font-title font-bold text-xl text-white">Catálogo de Inventario</h2>
-        <span class="bg-spotify-highlight text-gray-400 text-xs font-bold px-3.5 py-1.5 rounded-full">
-          <%= products.length %> repuestos cargados
-        </span>
-      </div>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-      <% if (products.length === 0) { %>
-        <div class="text-center py-20">
-          <div class="inline-flex bg-spotify-highlight/50 p-4 rounded-2xl text-gray-500 mb-4">
-            <i data-lucide="package-search" class="w-12 h-12"></i>
-          </div>
-          <p class="text-gray-400 font-semibold">El catálogo está vacío.</p>
-          <% if (user.role === 'admin' || user.role === 'support') { %>
-            <p class="text-xs text-gray-500 mt-1">Registra tu primer repuesto utilizando el formulario de la izquierda.</p>
-          <% } %>
-        </div>
-      <% } else { %>
-        <!-- Rejilla de Tarjetas Premium (Resuelve la UX y visibilidad inmediata de Precios) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <% products.forEach(product => { %>
-            <div class="bg-spotify-black border border-spotify-highlight/40 hover:border-spotify-orange/30 rounded-xl p-5 shadow-lg flex flex-col justify-between gap-4 transition-all duration-200 group relative overflow-hidden">
-              
-              <!-- Efecto decorativo sutil en hover -->
-              <div class="absolute -top-16 -right-16 w-32 h-32 bg-spotify-orange/5 rounded-full blur-2xl group-hover:bg-spotify-orange/10 transition-all duration-300"></div>
+      <!-- COLUMNA IZQUIERDA: Formulario de Operaciones (Oculto para mecánicos) -->
+      <div class="lg:col-span-4 space-y-6">
+        <% if (user.role==='admin' || user.role==='support' ) { %>
+          <div
+            class="bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
+            <h2 id="form-title" class="font-title font-bold text-lg text-white mb-6 flex items-center gap-2">
+              <i data-lucide="plus-circle" id="form-icon" class="text-spotify-orange w-5 h-5"></i>
+              <span>Registrar Nuevo Repuesto</span>
+            </h2>
 
-              <div class="space-y-3 relative z-10">
-                <!-- CABECERA DE LA TARJETA: Categoría y Estado del Stock -->
-                <div class="flex items-center justify-between gap-2">
-                  <% 
-                    let catColor = 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-                    if (product.category === 'chasis') catColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
-                    if (product.category === 'motor') catColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                    if (product.category === 'frenos') catColor = 'bg-red-500/10 text-red-400 border-red-500/20';
-                  %>
-                  <span class="inline-flex text-[10px] font-bold px-2 py-1 uppercase rounded-md border <%= catColor %>">
-                    <%= product.category %>
-                  </span>
-                  
-                  <% if (product.stock > 5) { %>
-                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                      <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                      <%= product.stock %> uds
-                    </span>
-                  <% } else if (product.stock > 0) { %>
-                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                      <span class="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
-                      Bajo Stock (<%= product.stock %>)
-                    </span>
-                  <% } else { %>
-                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
-                      Agotado
-                    </span>
-                  <% } %>
-                </div>
+            <form id="product-form" action="/dashboard/products" method="POST" class="space-y-4">
+              <!-- ID oculto para edición -->
+              <input type="hidden" id="product-id" name="id">
 
-                <!-- DETALLE PRINCIPAL: Nombre, Marca y SKU -->
+              <div>
+                <label for="sku" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Código
+                  SKU</label>
+                <input type="text" id="sku" name="sku" required
+                  class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none"
+                  placeholder="Ej. VOL-FH16-CH10">
+              </div>
+
+              <div>
+                <label for="name" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Nombre
+                  de la Pieza</label>
+                <input type="text" id="name" name="name" required
+                  class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none"
+                  placeholder="Ej. Amortiguador Neumático Posterior">
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 class="font-title font-extrabold text-base text-white tracking-tight leading-tight group-hover:text-spotify-orange transition-colors">
-                    <%= product.name %>
-                  </h3>
-                  <div class="flex items-center gap-2 mt-1.5 text-xs text-gray-500 font-semibold">
-                    <span>Marca: <%= product.brand %></span>
-                    <span class="w-1 h-1 rounded-full bg-spotify-highlight"></span>
-                    <span class="text-spotify-orange font-mono tracking-wider uppercase"><%= product.sku %></span>
+                  <label for="category"
+                    class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Categoría</label>
+                  <div class="relative">
+                    <select id="category" name="category" required
+                      class="block w-full pl-3 pr-8 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none appearance-none cursor-pointer">
+                      <option value="chasis">Chasis</option>
+                      <option value="motor">Motor</option>
+                      <option value="frenos">Frenos</option>
+                      <option value="otros">Otros</option>
+                    </select>
+                    <span
+                      class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-spotify-orange">
+                      <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    </span>
                   </div>
                 </div>
 
-                <!-- ESPECIFICACIONES TÉCNICAS (Formato de cuadrícula compacta) -->
-                <div class="grid grid-cols-2 gap-2 bg-spotify-dark/50 border border-spotify-highlight/25 p-3 rounded-lg text-[11px] font-semibold text-gray-400">
-                  <div class="flex items-center gap-1.5">
-                    <i data-lucide="zap" class="w-3.5 h-3.5 text-gray-600"></i>
-                    <span>Torque: <strong class="text-gray-300"><%= product.technicalSpecs?.torque_nm || 'N/A' %></strong></span>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-gray-600"></i>
-                    <span>Medidas: <strong class="text-gray-300"><%= product.technicalSpecs?.dimensions || 'N/A' %></strong></span>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <i data-lucide="scale" class="w-3.5 h-3.5 text-gray-600"></i>
-                    <span>Peso: <strong class="text-gray-300"><%= product.technicalSpecs?.weight_kg || 'N/A' %></strong></span>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <i data-lucide="activity" class="w-3.5 h-3.5 text-gray-600"></i>
-                    <span>Vida Útil: <strong class="text-gray-300"><%= (product.durabilityKm || 0).toLocaleString() %> km</strong></span>
-                  </div>
-                </div>
-
-                <!-- COMPATIBILIDAD (Texto italicizado sutil) -->
-                <div class="text-[11px] text-gray-500 flex items-start gap-1 leading-relaxed bg-spotify-dark/20 p-2 rounded border border-spotify-highlight/15">
-                  <i data-lucide="info" class="w-3.5 h-3.5 text-spotify-orange flex-shrink-0 mt-0.5"></i>
-                  <p>
-                    <span class="font-bold text-gray-400">Compatibilidad:</span> <%= product.compatibility || 'Universal o no especificado' %>
-                  </p>
+                <div>
+                  <label for="brand"
+                    class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Marca</label>
+                  <input type="text" id="brand" name="brand" required
+                    class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none"
+                    placeholder="Ej. Sachs">
                 </div>
               </div>
 
-              <!-- PIE DE LA TARJETA: Precio y Botón de Acción Directo -->
-              <div class="border-t border-spotify-highlight/30 pt-3 flex items-center justify-between gap-4 mt-2 relative z-10">
+              <div>
+                <label for="compatibility"
+                  class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Compatibilidad de
+                  Modelos</label>
+                <textarea id="compatibility" name="compatibility" rows="2"
+                  class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none resize-none"
+                  placeholder="Ej. Volvo FH16, Volvo FM12 (Camiones)"></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <span class="block text-[10px] uppercase font-bold tracking-wider text-gray-500">Precio de Venta</span>
-                  <span class="text-xl font-extrabold text-emerald-400">$<%= parseFloat(product.price).toFixed(2) %></span>
+                  <label for="durabilityKm"
+                    class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Durabilidad
+                    (Km)</label>
+                  <input type="number" id="durabilityKm" name="durabilityKm" required min="0" value="100000"
+                    class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none">
                 </div>
 
-                <% if (user.role === 'admin' || user.role === 'support') { %>
-                  <!-- Acciones de Edición/Eliminación para Especialistas -->
-                  <div class="flex items-center gap-2">
-                    <button 
-                      type="button"
-                      class="edit-btn inline-flex items-center justify-center p-2.5 bg-spotify-highlight hover:bg-spotify-card border border-spotify-highlight hover:border-gray-500 text-white rounded-lg transition-all"
-                      data-id="<%= product.id %>"
-                      data-sku="<%= product.sku %>"
-                      data-name="<%= product.name %>"
-                      data-category="<%= product.category %>"
-                      data-brand="<%= product.brand %>"
-                      data-compatibility="<%= product.compatibility %>"
-                      data-durability="<%= product.durabilityKm %>"
-                      data-stock="<%= product.stock %>"
-                      data-price="<%= product.price %>"
-                      data-torque="<%= product.technicalSpecs?.torque_nm || '' %>"
-                      data-dimensions="<%= product.technicalSpecs?.dimensions || '' %>"
-                      data-weight="<%= product.technicalSpecs?.weight_kg || '' %>"
-                      title="Editar Ficha"
-                    >
-                      <i data-lucide="edit-2" class="w-4 h-4"></i>
-                    </button>
-                    <% if (user.role === 'admin') { %>
-                      <form action="/dashboard/products/delete/<%= product.id %>" method="POST" onsubmit="return confirm('¿Eliminar esta pieza de repuesto de forma permanente?');">
-                        <button type="submit" class="inline-flex items-center justify-center p-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500 text-red-400 rounded-lg transition-all" title="Eliminar del catálogo">
-                          <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <div>
+                  <label for="stock" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Stock
+                    Disponible</label>
+                  <input type="number" id="stock" name="stock" required min="0" value="5"
+                    class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none">
+                </div>
+              </div>
+
+              <div>
+                <label for="price" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Precio
+                  Unitario ($ USD)</label>
+                <input type="number" id="price" name="price" required min="0" step="0.01" placeholder="0.00"
+                  class="block w-full px-3.5 py-2 bg-spotify-black border border-spotify-highlight focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-lg text-sm transition-all outline-none">
+              </div>
+
+              <!-- Sección de Especificaciones Técnicas JSON -->
+              <div class="border-t border-spotify-highlight/40 pt-4">
+                <span class="block text-xs font-bold uppercase tracking-wider text-spotify-orange mb-3">Especificaciones
+                  Técnicas</span>
+                <div class="grid grid-cols-3 gap-2">
+                  <div>
+                    <label for="torque_nm" class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Torque
+                      (Nm)</label>
+                    <input type="text" id="torque_nm" name="torque_nm"
+                      class="block w-full px-2 py-1.5 bg-spotify-black border border-spotify-highlight text-white rounded text-xs transition-all outline-none"
+                      placeholder="N/A">
+                  </div>
+                  <div>
+                    <label for="dimensions"
+                      class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Medidas</label>
+                    <input type="text" id="dimensions" name="dimensions"
+                      class="block w-full px-2 py-1.5 bg-spotify-black border border-spotify-highlight text-white rounded text-xs transition-all outline-none"
+                      placeholder="N/A">
+                  </div>
+                  <div>
+                    <label for="weight_kg" class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Peso
+                      (Kg)</label>
+                    <input type="text" id="weight_kg" name="weight_kg"
+                      class="block w-full px-2 py-1.5 bg-spotify-black border border-spotify-highlight text-white rounded text-xs transition-all outline-none"
+                      placeholder="N/A">
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-4 flex gap-3">
+                <button type="submit" id="submit-btn"
+                  class="flex-1 flex justify-center py-2.5 px-4 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-sm font-bold rounded-xl shadow-lg transition-all outline-none">
+                  Guardar Repuesto
+                </button>
+                <button type="button" id="cancel-edit-btn"
+                  class="hidden py-2.5 px-4 bg-spotify-highlight hover:bg-spotify-card border border-spotify-highlight text-white text-sm font-bold rounded-xl transition-all outline-none">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+          <% } else { %>
+            <!-- Tarjeta del Rol Mecánico -->
+            <div class="bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl space-y-4">
+              <div class="flex items-center gap-3">
+                <div class="bg-spotify-orange/10 p-2 rounded-xl border border-spotify-orange/20">
+                  <i data-lucide="wrench" class="text-spotify-orange w-5 h-5"></i>
+                </div>
+                <h2 class="font-title font-bold text-lg text-white">Vista de Lector</h2>
+              </div>
+              <p class="text-sm text-gray-400 leading-relaxed">
+                Como **Mecánico**, tienes permisos para consultar existencias, marcas, especificaciones técnicas y
+                durabilidad en kilómetros de los repuestos.
+              </p>
+              <div class="bg-spotify-black p-4 rounded-xl border border-spotify-highlight/40">
+                <span class="block text-xs font-bold uppercase tracking-wider text-spotify-orange mb-1">¿Dudas de
+                  Compatibilidad?</span>
+                <p class="text-xs text-gray-500 mb-3 leading-relaxed">Consulta a soporte técnico en tiempo real para
+                  verificar si la pieza es apta para tu camión.</p>
+                <a href="/chat"
+                  class="w-full flex items-center justify-center gap-2 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-xs font-bold py-2.5 px-4 rounded-lg shadow-md hover:-translate-y-0.5 transition-all">
+                  <i data-lucide="message-square" class="w-4 h-4"></i> Consultar Soporte
+                </a>
+              </div>
+            </div>
+            <% } %>
+      </div>
+
+      <!-- COLUMNA DERECHA: Catálogo de Repuestos -->
+      <div class="lg:col-span-8 bg-spotify-dark border border-spotify-highlight/50 rounded-2xl p-6 shadow-xl">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <h2 class="font-title font-bold text-xl text-white">Catálogo de Inventario</h2>
+          <span class="bg-spotify-highlight text-gray-400 text-xs font-bold px-3.5 py-1.5 rounded-full">
+            <%= products.length %> repuestos cargados
+          </span>
+        </div>
+
+        <% if (products.length===0) { %>
+          <div class="text-center py-20">
+            <div class="inline-flex bg-spotify-highlight/50 p-4 rounded-2xl text-gray-500 mb-4">
+              <i data-lucide="package-search" class="w-12 h-12"></i>
+            </div>
+            <p class="text-gray-400 font-semibold">El catálogo está vacío.</p>
+            <% if (user.role==='admin' || user.role==='support' ) { %>
+              <p class="text-xs text-gray-500 mt-1">Registra tu primer repuesto utilizando el formulario de la
+                izquierda.</p>
+              <% } %>
+          </div>
+          <% } else { %>
+            <!-- Barra de Búsqueda Interactiva (Satisface al 100% el requerimiento 7.f.ii de Query/Search) -->
+            <div class="mb-6 relative animate-[fadeIn_0.3s_ease-out]">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                <i data-lucide="search" class="w-4 h-4"></i>
+              </span>
+              <input type="text" id="search-input"
+                placeholder="Buscar repuesto por nombre, SKU, marca, categoría o compatibilidad..."
+                class="block w-full pl-10 pr-4 py-2.5 bg-spotify-black border border-spotify-highlight/60 focus:border-spotify-orange focus:ring-1 focus:ring-spotify-orange text-white rounded-xl text-sm transition-all outline-none">
+            </div>
+
+            <!-- Rejilla de Tarjetas Premium (Resuelve la UX y visibilidad inmediata de Precios) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="products-grid">
+              <% products.forEach(product=> { %>
+                <div
+                  class="product-card bg-spotify-black border border-spotify-highlight/40 hover:border-spotify-orange/30 rounded-xl p-5 shadow-lg flex flex-col justify-between gap-4 transition-all duration-200 group relative overflow-hidden"
+                  data-search-terms="<%= product.name.toLowerCase() %> <%= product.sku.toLowerCase() %> <%= product.brand.toLowerCase() %> <%= product.category.toLowerCase() %> <%= (product.compatibility || '').toLowerCase() %>">
+
+                  <!-- Efecto decorativo sutil en hover -->
+                  <div
+                    class="absolute -top-16 -right-16 w-32 h-32 bg-spotify-orange/5 rounded-full blur-2xl group-hover:bg-spotify-orange/10 transition-all duration-300">
+                  </div>
+
+                  <div class="space-y-3 relative z-10">
+                    <!-- CABECERA DE LA TARJETA: Categoría y Estado del Stock -->
+                    <div class="flex items-center justify-between gap-2">
+                      <% let catColor='bg-gray-500/10 text-gray-400 border-gray-500/20' ; if
+                        (product.category==='chasis' ) catColor='bg-cyan-500/10 text-cyan-400 border-cyan-500/20' ; if
+                        (product.category==='motor' ) catColor='bg-amber-500/10 text-amber-400 border-amber-500/20' ; if
+                        (product.category==='frenos' ) catColor='bg-red-500/10 text-red-400 border-red-500/20' ; %>
+                        <span
+                          class="inline-flex text-[10px] font-bold px-2 py-1 uppercase rounded-md border <%= catColor %>">
+                          <%= product.category %>
+                        </span>
+
+                        <% if (product.stock> 5) { %>
+                          <span
+                            class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                            <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                            <%= product.stock %> uds
+                          </span>
+                          <% } else if (product.stock> 0) { %>
+                            <span
+                              class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                              <span class="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
+                              Bajo Stock (<%= product.stock %>)
+                            </span>
+                            <% } else { %>
+                              <span
+                                class="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
+                                Agotado
+                              </span>
+                              <% } %>
+                    </div>
+
+                    <!-- DETALLE PRINCIPAL: Nombre, Marca y SKU -->
+                    <div>
+                      <h3
+                        class="font-title font-extrabold text-base text-white tracking-tight leading-tight group-hover:text-spotify-orange transition-colors">
+                        <%= product.name %>
+                      </h3>
+                      <div class="flex items-center gap-2 mt-1.5 text-xs text-gray-500 font-semibold">
+                        <span>Marca: <%= product.brand %></span>
+                        <span class="w-1 h-1 rounded-full bg-spotify-highlight"></span>
+                        <span class="text-spotify-orange font-mono tracking-wider uppercase">
+                          <%= product.sku %>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- ESPECIFICACIONES TÉCNICAS (Formato de cuadrícula compacta) -->
+                    <div
+                      class="grid grid-cols-2 gap-2 bg-spotify-dark/50 border border-spotify-highlight/25 p-3 rounded-lg text-[11px] font-semibold text-gray-400">
+                      <div class="flex items-center gap-1.5">
+                        <i data-lucide="zap" class="w-3.5 h-3.5 text-gray-600"></i>
+                        <span>Torque: <strong class="text-gray-300">
+                            <%= product.technicalSpecs?.torque_nm || 'N/A' %>
+                          </strong></span>
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-gray-600"></i>
+                        <span>Medidas: <strong class="text-gray-300">
+                            <%= product.technicalSpecs?.dimensions || 'N/A' %>
+                          </strong></span>
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <i data-lucide="scale" class="w-3.5 h-3.5 text-gray-600"></i>
+                        <span>Peso: <strong class="text-gray-300">
+                            <%= product.technicalSpecs?.weight_kg || 'N/A' %>
+                          </strong></span>
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <i data-lucide="activity" class="w-3.5 h-3.5 text-gray-600"></i>
+                        <span>Vida Útil: <strong class="text-gray-300">
+                            <%= (product.durabilityKm || 0).toLocaleString() %> km
+                          </strong></span>
+                      </div>
+                    </div>
+
+                    <!-- COMPATIBILIDAD (Texto italicizado sutil) -->
+                    <div
+                      class="text-[11px] text-gray-500 flex items-start gap-1 leading-relaxed bg-spotify-dark/20 p-2 rounded border border-spotify-highlight/15">
+                      <i data-lucide="info" class="w-3.5 h-3.5 text-spotify-orange flex-shrink-0 mt-0.5"></i>
+                      <p>
+                        <span class="font-bold text-gray-400">Compatibilidad:</span>
+                        <%= product.compatibility || 'Universal o no especificado' %>
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- PIE DE LA TARJETA: Precio y Botón de Acción Directo -->
+                  <div
+                    class="border-t border-spotify-highlight/30 pt-3 flex items-center justify-between gap-4 mt-2 relative z-10">
+                    <div>
+                      <span class="block text-[10px] uppercase font-bold tracking-wider text-gray-500">Precio de
+                        Venta</span>
+                      <span class="text-xl font-extrabold text-emerald-400">$<%= parseFloat(product.price).toFixed(2) %>
+                          </span>
+                    </div>
+
+                    <% if (user.role==='admin' || user.role==='support' ) { %>
+                      <!-- Acciones de Edición/Eliminación para Especialistas -->
+                      <div class="flex items-center gap-2">
+                        <button type="button"
+                          class="edit-btn inline-flex items-center justify-center p-2.5 bg-spotify-highlight hover:bg-spotify-card border border-spotify-highlight hover:border-gray-500 text-white rounded-lg transition-all"
+                          data-id="<%= product.id %>" data-sku="<%= product.sku %>" data-name="<%= product.name %>"
+                          data-category="<%= product.category %>" data-brand="<%= product.brand %>"
+                          data-compatibility="<%= product.compatibility %>"
+                          data-durability="<%= product.durabilityKm %>" data-stock="<%= product.stock %>"
+                          data-price="<%= product.price %>" data-torque="<%= product.technicalSpecs?.torque_nm || '' %>"
+                          data-dimensions="<%= product.technicalSpecs?.dimensions || '' %>"
+                          data-weight="<%= product.technicalSpecs?.weight_kg || '' %>" title="Editar Ficha">
+                          <i data-lucide="edit-2" class="w-4 h-4"></i>
                         </button>
-                      </form>
-                    <% } %>
+                        <% if (user.role==='admin' ) { %>
+                          <form action="/dashboard/products/delete/<%= product.id %>" method="POST"
+                            onsubmit="return confirm('¿Eliminar esta pieza de repuesto de forma permanente?');">
+                            <button type="submit"
+                              class="inline-flex items-center justify-center p-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500 text-red-400 rounded-lg transition-all"
+                              title="Eliminar del catálogo">
+                              <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                          </form>
+                          <% } %>
+                      </div>
+                      <% } else if (user.role==='mechanic' ) { %>
+                        <!-- Botón de compra para Mecánicos -->
+                        <% if (product.stock> 0) { %>
+                          <form action="/cart/add" method="POST" class="inline-block">
+                            <input type="hidden" name="productId" value="<%= product.id %>">
+                            <input type="hidden" name="quantity" value="1">
+                            <button type="submit"
+                              class="inline-flex items-center gap-1.5 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-spotify-orange/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150">
+                              <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                              <span>Añadir</span>
+                            </button>
+                          </form>
+                          <% } else { %>
+                            <span
+                              class="text-xs font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-xl select-none">Agotado</span>
+                            <% } %>
+                              <% } %>
                   </div>
-                <% } else if (user.role === 'mechanic') { %>
-                  <!-- Botón de compra para Mecánicos -->
-                  <% if (product.stock > 0) { %>
-                    <form action="/cart/add" method="POST" class="inline-block">
-                      <input type="hidden" name="productId" value="<%= product.id %>">
-                      <input type="hidden" name="quantity" value="1">
-                      <button type="submit" class="inline-flex items-center gap-1.5 bg-spotify-orange hover:bg-spotify-orangeHover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-spotify-orange/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150">
-                        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                        <span>Añadir</span>
-                      </button>
-                    </form>
-                  <% } else { %>
-                    <span class="text-xs font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-xl select-none">Agotado</span>
-                  <% } %>
-                <% } %>
-              </div>
 
+                </div>
+                <% }) %>
             </div>
-          <% }) %>
-        </div>
-      <% } %>
+            <% } %>
+      </div>
     </div>
   </div>
-</div>
 
-<% if (user.role === 'admin' || user.role === 'support') { %>
-  <!-- Script dinámico para administrar la edición en la misma vista sin recargar la página -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const editButtons = document.querySelectorAll('.edit-btn');
-      const productForm = document.getElementById('product-form');
-      const formTitle = document.getElementById('form-title').querySelector('span');
-      const formIcon = document.getElementById('form-icon');
-      const submitBtn = document.getElementById('submit-btn');
-      const cancelEditBtn = document.getElementById('cancel-edit-btn');
+  <% if (user.role==='admin' || user.role==='support' ) { %>
+    <!-- Script dinámico para administrar la edición en la misma vista sin recargar la página -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const editButtons = document.querySelectorAll('.edit-btn');
+        const productForm = document.getElementById('product-form');
+        const formTitle = document.getElementById('form-title').querySelector('span');
+        const formIcon = document.getElementById('form-icon');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
 
-      // Inputs
-      const productIdInput = document.getElementById('product-id');
-      const skuInput = document.getElementById('sku');
-      const nameInput = document.getElementById('name');
-      const categoryInput = document.getElementById('category');
-      const brandInput = document.getElementById('brand');
-      const compatibilityInput = document.getElementById('compatibility');
-      const durabilityInput = document.getElementById('durabilityKm');
-      const stockInput = document.getElementById('stock');
-      const priceInput = document.getElementById('price');
-      const torqueInput = document.getElementById('torque_nm');
-      const dimensionsInput = document.getElementById('dimensions');
-      const weightInput = document.getElementById('weight_kg');
+        // Inputs
+        const productIdInput = document.getElementById('product-id');
+        const skuInput = document.getElementById('sku');
+        const nameInput = document.getElementById('name');
+        const categoryInput = document.getElementById('category');
+        const brandInput = document.getElementById('brand');
+        const compatibilityInput = document.getElementById('compatibility');
+        const durabilityInput = document.getElementById('durabilityKm');
+        const stockInput = document.getElementById('stock');
+        const priceInput = document.getElementById('price');
+        const torqueInput = document.getElementById('torque_nm');
+        const dimensionsInput = document.getElementById('dimensions');
+        const weightInput = document.getElementById('weight_kg');
 
-      // Asignar clics a los botones de editar
-      editButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.getAttribute('data-id');
-          
-          productIdInput.value = id;
-          skuInput.value = btn.getAttribute('data-sku');
-          skuInput.setAttribute('disabled', 'true'); // SKU no modificable en edición
-          nameInput.value = btn.getAttribute('data-name');
-          categoryInput.value = btn.getAttribute('data-category');
-          brandInput.value = btn.getAttribute('data-brand');
-          compatibilityInput.value = btn.getAttribute('data-compatibility');
-          durabilityInput.value = btn.getAttribute('data-durability');
-          stockInput.value = btn.getAttribute('data-stock');
-          priceInput.value = btn.getAttribute('data-price');
-          torqueInput.value = btn.getAttribute('data-torque');
-          dimensionsInput.value = btn.getAttribute('data-dimensions');
-          weightInput.value = btn.getAttribute('data-weight');
+        // Asignar clics a los botones de editar
+        editButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
 
-          // Cambiar acción del formulario
-          productForm.setAttribute('action', `/dashboard/products/edit/${id}`);
+            productIdInput.value = id;
+            skuInput.value = btn.getAttribute('data-sku');
+            skuInput.setAttribute('disabled', 'true'); // SKU no modificable en edición
+            nameInput.value = btn.getAttribute('data-name');
+            categoryInput.value = btn.getAttribute('data-category');
+            brandInput.value = btn.getAttribute('data-brand');
+            compatibilityInput.value = btn.getAttribute('data-compatibility');
+            durabilityInput.value = btn.getAttribute('data-durability');
+            stockInput.value = btn.getAttribute('data-stock');
+            priceInput.value = btn.getAttribute('data-price');
+            torqueInput.value = btn.getAttribute('data-torque');
+            dimensionsInput.value = btn.getAttribute('data-dimensions');
+            weightInput.value = btn.getAttribute('data-weight');
 
-          // Ajustes visuales de edición
-          formTitle.textContent = 'Editar Ficha del Repuesto';
-          formIcon.setAttribute('data-lucide', 'edit-3');
-          submitBtn.textContent = 'Actualizar Repuesto';
-          cancelEditBtn.classList.remove('hidden');
+            // Cambiar acción del formulario
+            productForm.setAttribute('action', `/dashboard/products/edit/${id}`);
+
+            // Ajustes visuales de edición
+            formTitle.textContent = 'Editar Ficha del Repuesto';
+            formIcon.setAttribute('data-lucide', 'edit-3');
+            submitBtn.textContent = 'Actualizar Repuesto';
+            cancelEditBtn.classList.remove('hidden');
+
+            lucide.createIcons();
+            productForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+        });
+
+        // Resetear formulario a creación
+        const resetForm = () => {
+          productIdInput.value = '';
+          productForm.reset();
+          skuInput.removeAttribute('disabled');
+          productForm.setAttribute('action', '/dashboard/products');
+
+          formTitle.textContent = 'Registrar Nuevo Repuesto';
+          formIcon.setAttribute('data-lucide', 'plus-circle');
+          submitBtn.textContent = 'Guardar Repuesto';
+          cancelEditBtn.classList.add('hidden');
 
           lucide.createIcons();
-          productForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
+        };
+
+        cancelEditBtn.addEventListener('click', resetForm);
       });
+    </script>
+    <% } %>
 
-      // Resetear formulario a creación
-      const resetForm = () => {
-        productIdInput.value = '';
-        productForm.reset();
-        skuInput.removeAttribute('disabled');
-        productForm.setAttribute('action', '/dashboard/products');
-        
-        formTitle.textContent = 'Registrar Nuevo Repuesto';
-        formIcon.setAttribute('data-lucide', 'plus-circle');
-        submitBtn.textContent = 'Guardar Repuesto';
-        cancelEditBtn.classList.add('hidden');
+      <!-- Script para Búsqueda y Filtro en tiempo real en el catálogo (Requerimiento 7.f.ii) -->
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const searchInput = document.getElementById('search-input');
+          if (searchInput) {
+            const cards = document.querySelectorAll('.product-card');
 
-        lucide.createIcons();
-      };
+            searchInput.addEventListener('input', (e) => {
+              const query = e.target.value.toLowerCase().trim();
 
-      cancelEditBtn.addEventListener('click', resetForm);
-    });
-  </script>
-<% } %>
+              cards.forEach(card => {
+                const searchTerms = card.getAttribute('data-search-terms') || '';
+                if (searchTerms.includes(query)) {
+                  card.style.display = '';
+                  card.classList.remove('opacity-0', 'scale-95');
+                } else {
+                  card.style.display = 'none';
+                }
+              });
+            });
+          }
+        });
+      </script>
 
-<%- include('partials/footer') %>
+      <%- include('partials/footer') %>
