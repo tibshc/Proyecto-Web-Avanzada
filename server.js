@@ -13,17 +13,37 @@ const server = http.createServer(app);
 // 2. Inicializar Socket.IO sobre el mismo servidor HTTP
 const io = socketIo(server);
 
+// Registrar 'io' en la app para que los controladores puedan emitir eventos globales (F4)
+app.set('io', io);
+
+// ============================================================
 // Configuración de Eventos de Socket.IO en Tiempo Real
+// ============================================================
 io.on('connection', (socket) => {
   console.log(`🔌 Nuevo cliente conectado: ${socket.id}`);
 
-  // Recibir mensajes de chat desde el cliente
+  // F5: El cliente del chat solicita unirse a la sala de soporte técnico
+  // Solo los clientes de la página /chat emitirán este evento
+  socket.on('join_chat_room', () => {
+    socket.join('support-room');
+    console.log(`💬 Cliente ${socket.id} unido a support-room`);
+  });
+
+  // F5: Recibir mensajes de chat y retransmitir SOLO a la sala support-room
+  // Corrige el bug donde io.emit() llegaba a todos los clientes conectados
   socket.on('chat_message', (messageData) => {
-    // Validar mensaje entrante
-    if (messageData && messageData.text.trim()) {
-      // Re-transmitir el mensaje a TODOS los clientes conectados en la sala
-      io.emit('message', messageData);
+    if (messageData && messageData.text && messageData.text.trim()) {
+      io.to('support-room').emit('message', messageData);
     }
+  });
+
+  // F5: Indicador "está escribiendo..." — retransmitir a la sala excluyendo el emisor
+  socket.on('typing', (data) => {
+    socket.to('support-room').emit('user_typing', data);
+  });
+
+  socket.on('stop_typing', () => {
+    socket.to('support-room').emit('user_stop_typing');
   });
 
   // Evento al desconectarse un cliente
@@ -35,17 +55,12 @@ io.on('connection', (socket) => {
 // 3. Inicializar Base de Datos y Servidor
 const startServer = async () => {
   try {
-    // Verificar conexión física a PostgreSQL
     await testConnection();
 
-    // Sincronizar todos los Modelos con PostgreSQL (Crea las tablas automáticamente si no existen)
-    // Usamos force: false para no borrar los datos existentes.
-    // Usamos alter: true para aplicar cambios menores a las tablas sin borrar registros.
     console.log('🔄 Sincronizando modelos con la base de datos...');
     await sequelize.sync({ force: false, alter: true });
     console.log('✅ Base de datos sincronizada correctamente.');
 
-    // Iniciar la escucha del servidor HTTP + Socket.IO
     server.listen(PORT, () => {
       console.log(`===========================================================`);
       console.log(`🚀 SERVIDOR EJECUTÁNDOSE EN: http://localhost:${PORT}`);

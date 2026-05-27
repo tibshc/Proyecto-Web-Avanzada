@@ -130,6 +130,10 @@ exports.createProduct = async (req, res) => {
       price: parsedPrice
     });
 
+    // F4: Notificar a todos los clientes del dashboard via Socket.IO
+    const io = req.app.get('io');
+    if (io) io.emit('product_update', { type: 'created', productName: name });
+
     res.redirect('/dashboard?success=' + encodeURIComponent('Repuesto registrado con éxito en el catálogo.'));
   } catch (error) {
     console.error('Error al crear repuesto:', error);
@@ -206,7 +210,13 @@ exports.deleteProduct = async (req, res) => {
       return res.redirect('/dashboard?error=' + encodeURIComponent('Repuesto no encontrado.'));
     }
 
+    const productName = product.name; // Capturar nombre antes de eliminar
     await product.destroy();
+
+    // F4: Notificar a todos los clientes del dashboard via Socket.IO
+    const io = req.app.get('io');
+    if (io) io.emit('product_update', { type: 'deleted', productName });
+
     res.redirect('/dashboard?success=' + encodeURIComponent('Repuesto eliminado del catálogo con éxito.'));
   } catch (error) {
     console.error('Error al eliminar repuesto:', error);
