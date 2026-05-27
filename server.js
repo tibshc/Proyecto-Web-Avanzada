@@ -1,7 +1,7 @@
 const http = require('http');
 const socketIo = require('socket.io');
 const app = require('./app');
-const { sequelize } = require('./models');
+const { sequelize, Message } = require('./models');
 const { testConnection } = require('./config/database');
 
 require('dotenv').config();
@@ -24,15 +24,35 @@ io.on('connection', (socket) => {
 
   // F5: El cliente del chat solicita unirse a la sala de soporte técnico
   // Solo los clientes de la página /chat emitirán este evento
-  socket.on('join_chat_room', () => {
+  socket.on('join_chat_room', async () => {
     socket.join('support-room');
     console.log(`💬 Cliente ${socket.id} unido a support-room`);
+    
+    // 📝 CORRECCIÓN DEL BUG: Cargar el historial de mensajes desde la BD
+    try {
+      const chatHistory = await Message.findAll({
+        order: [['createdAt', 'ASC']],
+        limit: 100 // Limitar a últimos 100 mensajes para no sobrecargar
+      });
+      
+      // Enviar el historial solo al cliente que se acaba de conectar
+      socket.emit('chat_history', chatHistory.map(msg => ({
+        text: msg.text,
+        sender: msg.sender,
+        role: msg.role,
+        timestamp: msg.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      })));
+      
+      console.log(`📜 Historial de ${chatHistory.length} mensajes enviado al cliente ${socket.id}`);
+    } catch (error) {
+      console.error('❌ Error al cargar historial de chat:', error.message);
+    }
   });
 
   // F5: Recibir mensajes de chat y retransmitir SOLO a la sala support-room
   // SECURITY (STRIDE - Tampering): Validar tipo y longitud antes de retransmitir.
   // Evita que un cliente malicioso envíe payloads masivos o inyecte HTML en el chat.
-  socket.on('chat_message', (messageData) => {
+  socket.on('chat_message', async (messageData) => {
     // Validación de tipo
     if (!messageData || typeof messageData !== 'object') return;
 
@@ -46,12 +66,27 @@ io.on('connection', (socket) => {
     // Sanitización básica: escapar < > para prevenir XSS en el chat (STRIDE - Tampering)
     const escapeHTML = (str) => str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-    io.to('support-room').emit('message', {
+    const sanitizedMessage = {
       text:      escapeHTML(text),
       sender:    escapeHTML(sender),
       role:      messageData.role || 'mechanic',
       timestamp: messageData.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    });
+    };
+
+    // 📝 CORRECCIÓN DEL BUG: Guardar el mensaje en la base de datos antes de retransmitir
+    try {
+      await Message.create({
+        text: sanitizedMessage.text,
+        sender: sanitizedMessage.sender,
+        role: sanitizedMessage.role
+      });
+      console.log(`💾 Mensaje guardado en BD de ${sender}`);
+    } catch (error) {
+      console.error('❌ Error al guardar mensaje en BD:', error.message);
+    }
+
+    // Retransmitir el mensaje a todos los clientes en la sala
+    io.to('support-room').emit('message', sanitizedMessage);
   });
 
   // F5: Indicador "está escribiendo..." — retransmitir a la sala excluyendo el emisor

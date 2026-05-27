@@ -113,6 +113,71 @@
     };
     scrollToBottom();
 
+    // Pintar mensaje en pantalla
+    const displayMessage = (message) => {
+      const isSelf = message.sender === userName;
+      const roleLabel = message.role === 'support' ? 'Soporte' : (message.role === 'admin' ? 'Admin' : 'Mecánico');
+
+      // Crear envoltorio
+      const wrapper = document.createElement('div');
+      wrapper.className = `flex items-start gap-3 max-w-[75%] animate-[fadeIn_0.25s_ease-out] ${isSelf ? 'ml-auto flex-row-reverse' : ''}`;
+
+      // Icono o Avatar
+      const avatar = document.createElement('div');
+      avatar.className = `w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border text-xs font-bold ${
+        isSelf 
+          ? 'bg-spotify-orange/15 border-spotify-orange text-spotify-orange' 
+          : 'bg-spotify-highlight border-spotify-highlight text-gray-300'
+      }`;
+      avatar.textContent = message.sender.charAt(0).toUpperCase();
+
+      // Burbuja
+      const bubble = document.createElement('div');
+      bubble.className = `p-3.5 shadow-md ${
+        isSelf 
+          ? 'bg-spotify-orange border border-spotify-orangeHover text-white rounded-l-xl rounded-br-xl' 
+          : 'bg-spotify-dark border border-spotify-highlight text-gray-300 rounded-r-xl rounded-bl-xl'
+      }`;
+
+      // Cabecera
+      const header = document.createElement('div');
+      header.className = 'flex justify-between items-center gap-4 mb-1';
+      
+      const senderText = document.createElement('span');
+      senderText.className = `text-xs font-bold ${isSelf ? 'text-white' : 'text-spotify-orange'}`;
+      senderText.textContent = `${message.sender} (${roleLabel})`;
+
+      const timeText = document.createElement('span');
+      timeText.className = `text-[9px] font-semibold ${isSelf ? 'text-orange-200' : 'text-gray-600'}`;
+      timeText.textContent = message.timestamp;
+
+      header.appendChild(senderText);
+      header.appendChild(timeText);
+
+      // Cuerpo del mensaje (sanitizado contra XSS)
+      const content = document.createElement('p');
+      content.className = 'text-sm leading-relaxed whitespace-pre-wrap break-words';
+      content.textContent = message.text;
+
+      bubble.appendChild(header);
+      bubble.appendChild(content);
+
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(bubble);
+
+      chatMessages.appendChild(wrapper);
+    };
+
+    // 📝 CORRECCIÓN DEL BUG: Escuchar el historial de chat cuando se conecta
+    // Esto carga todos los mensajes previos de la BD
+    socket.on('chat_history', (history) => {
+      console.log(`📜 Cargando ${history.length} mensajes del historial...`);
+      history.forEach(message => {
+        displayMessage(message);
+      });
+      scrollToBottom();
+    });
+
     // F5: Detección de escritura con debounce de 1.5 segundos
     let typingTimeout;
     let isTyping = false;
@@ -179,60 +244,5 @@
       clearTimeout(stopTypingTimer);
       typingIndicator.classList.add('hidden');
     });
-
-    // Pintar mensaje en pantalla
-    const displayMessage = (message) => {
-      const isSelf = message.sender === userName;
-      const roleLabel = message.role === 'support' ? 'Soporte' : (message.role === 'admin' ? 'Admin' : 'Mecánico');
-
-      // Crear envoltorio
-      const wrapper = document.createElement('div');
-      wrapper.className = `flex items-start gap-3 max-w-[75%] animate-[fadeIn_0.25s_ease-out] ${isSelf ? 'ml-auto flex-row-reverse' : ''}`;
-
-      // Icono o Avatar
-      const avatar = document.createElement('div');
-      avatar.className = `w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border text-xs font-bold ${
-        isSelf 
-          ? 'bg-spotify-orange/15 border-spotify-orange text-spotify-orange' 
-          : 'bg-spotify-highlight border-spotify-highlight text-gray-300'
-      }`;
-      avatar.textContent = message.sender.charAt(0).toUpperCase();
-
-      // Burbuja
-      const bubble = document.createElement('div');
-      bubble.className = `p-3.5 shadow-md ${
-        isSelf 
-          ? 'bg-spotify-orange border border-spotify-orangeHover text-white rounded-l-xl rounded-br-xl' 
-          : 'bg-spotify-dark border border-spotify-highlight text-gray-300 rounded-r-xl rounded-bl-xl'
-      }`;
-
-      // Cabecera
-      const header = document.createElement('div');
-      header.className = 'flex justify-between items-center gap-4 mb-1';
-      
-      const senderText = document.createElement('span');
-      senderText.className = `text-xs font-bold ${isSelf ? 'text-white' : 'text-spotify-orange'}`;
-      senderText.textContent = `${message.sender} (${roleLabel})`;
-
-      const timeText = document.createElement('span');
-      timeText.className = `text-[9px] font-semibold ${isSelf ? 'text-orange-200' : 'text-gray-600'}`;
-      timeText.textContent = message.timestamp;
-
-      header.appendChild(senderText);
-      header.appendChild(timeText);
-
-      // Cuerpo del mensaje (sanitizado contra XSS)
-      const content = document.createElement('p');
-      content.className = 'text-sm leading-relaxed whitespace-pre-wrap break-words';
-      content.textContent = message.text;
-
-      bubble.appendChild(header);
-      bubble.appendChild(content);
-
-      wrapper.appendChild(avatar);
-      wrapper.appendChild(bubble);
-
-      chatMessages.appendChild(wrapper);
-    };
   });
 </script>

@@ -3,6 +3,7 @@ const User = require('./User');
 const Product = require('./Product');
 const Cart = require('./Cart');
 const CartItem = require('./CartItem');
+const Message = require('./Message');
 
 // ==========================================
 // ASOCIACIONES Y RELACIONES ENTRE MODELOS
@@ -25,5 +26,6 @@ module.exports = {
   User,
   Product,
   Cart,
-  CartItem
+  CartItem,
+  Message
 };
