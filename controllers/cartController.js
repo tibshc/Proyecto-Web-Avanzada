@@ -90,6 +90,12 @@ exports.addToCart = async (req, res) => {
   const qtyToAdd      = Math.max(1, parseInt(req.body.quantity, 10) || 1);
   const userId        = req.session.user.id;
 
+  // CRUD FIX 6: Validar que productId exista antes de consultar la BD
+  if (!productId) {
+    req.flash('error', 'Producto inválido. No se pudo agregar al carrito.');
+    return res.redirect('/dashboard');
+  }
+
   try {
     const product = await Product.findByPk(productId, { attributes: ['id', 'name', 'stock', 'price'] });
     if (!product) {

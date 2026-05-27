@@ -566,7 +566,8 @@
 
             productIdInput.value = id;
             skuInput.value = btn.getAttribute('data-sku');
-            skuInput.setAttribute('disabled', 'true'); // SKU no modificable en edición
+            skuInput.setAttribute('readonly', 'true'); // readonly: el valor se envía en el POST, disabled NO
+            skuInput.classList.add('opacity-50', 'cursor-not-allowed');
             nameInput.value = btn.getAttribute('data-name');
             categoryInput.value = btn.getAttribute('data-category');
             brandInput.value = btn.getAttribute('data-brand');
@@ -596,7 +597,8 @@
         const resetForm = () => {
           productIdInput.value = '';
           productForm.reset();
-          skuInput.removeAttribute('disabled');
+          skuInput.removeAttribute('readonly');
+          skuInput.classList.remove('opacity-50', 'cursor-not-allowed');
           productForm.setAttribute('action', '/dashboard/products');
 
           formTitle.textContent = 'Registrar Nuevo Repuesto';

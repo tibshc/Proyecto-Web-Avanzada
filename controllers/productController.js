@@ -93,6 +93,10 @@ const validateProductBody = (body) => {
   const parsedPrice      = parseFloat(body.price);
   const parsedDurability = parseInt(body.durabilityKm, 10);
 
+  // CRUD FIX 5: Validar campos de texto obligatorios
+  if (!name)  return { valid: false, errorMsg: 'El nombre del repuesto es obligatorio.' };
+  if (!brand) return { valid: false, errorMsg: 'La marca del repuesto es obligatoria.' };
+
   if (isNaN(parsedStock) || parsedStock < 0) {
     return { valid: false, errorMsg: 'El stock debe ser un número entero no negativo.' };
   }
@@ -155,7 +159,7 @@ exports.getAllProducts = async (req, res) => {
     const currentPage = Math.min(page, totalPages);
 
     let stats = null;
-    const { role } = req.session.user;
+    const role = req.session?.user?.role;
     if (role === 'admin' || role === 'support') {
       stats = await computeStats();
     }

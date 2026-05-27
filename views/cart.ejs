@@ -76,7 +76,7 @@
                       min="1" 
                       max="<%= item.product.stock %>"
                       required
-                      onchange="this.form.submit()"
+                      onchange="if(this.value >= 1 && this.value <= <%= item.product.stock %>) this.form.submit();"
                       class="w-12 bg-transparent text-center text-white text-xs font-bold outline-none focus:ring-0 border-0"
                     >
                     <span class="text-[10px] text-gray-500 font-semibold pr-1">uds</span>

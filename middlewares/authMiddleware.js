@@ -33,9 +33,8 @@ exports.isAuthenticated = (req, res, next) => {
 exports.authorizeRoles = (roles) => {
   return (req, res, next) => {
     if (!req.session?.user || !roles.includes(req.session.user.role)) {
-      return res.status(403).redirect(
-        '/dashboard?error=' + encodeURIComponent('No tiene permisos para realizar esta acción.')
-      );
+      req.flash('error', 'No tiene permisos para realizar esta acción.');
+      return res.redirect('/dashboard');
     }
     next();
   };
