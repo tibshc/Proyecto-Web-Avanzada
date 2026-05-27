@@ -30,11 +30,28 @@ io.on('connection', (socket) => {
   });
 
   // F5: Recibir mensajes de chat y retransmitir SOLO a la sala support-room
-  // Corrige el bug donde io.emit() llegaba a todos los clientes conectados
+  // SECURITY (STRIDE - Tampering): Validar tipo y longitud antes de retransmitir.
+  // Evita que un cliente malicioso envíe payloads masivos o inyecte HTML en el chat.
   socket.on('chat_message', (messageData) => {
-    if (messageData && messageData.text && messageData.text.trim()) {
-      io.to('support-room').emit('message', messageData);
-    }
+    // Validación de tipo
+    if (!messageData || typeof messageData !== 'object') return;
+
+    const text   = (messageData.text   || '').toString().trim();
+    const sender = (messageData.sender || 'Anónimo').toString().trim();
+
+    // Límite de longitud: previene flood de mensajes gigantes (STRIDE - DoS)
+    if (!text || text.length > 500) return;
+    if (sender.length > 60) return;
+
+    // Sanitización básica: escapar < > para prevenir XSS en el chat (STRIDE - Tampering)
+    const escapeHTML = (str) => str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    io.to('support-room').emit('message', {
+      text:      escapeHTML(text),
+      sender:    escapeHTML(sender),
+      role:      messageData.role || 'mechanic',
+      timestamp: messageData.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
   });
 
   // F5: Indicador "está escribiendo..." — retransmitir a la sala excluyendo el emisor

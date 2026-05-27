@@ -1,7 +1,7 @@
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const cartController = require('../controllers/cartController');
-const { isAuthenticated } = require('../middlewares/authMiddleware');
+const { isAuthenticated, ensureCartItemOwnership } = require('../middlewares/authMiddleware');
 
 // Ver carrito e historial de compras
 router.get('/', isAuthenticated, cartController.getCart);
@@ -10,10 +10,12 @@ router.get('/', isAuthenticated, cartController.getCart);
 router.post('/add', isAuthenticated, cartController.addToCart);
 
 // Actualizar cantidad de un artículo
-router.post('/update/:id', isAuthenticated, cartController.updateCartItem);
+// ensureCartItemOwnership: verifica propiedad (IDOR) + precarga CartItem+Cart+Product
+router.post('/update/:id', isAuthenticated, ensureCartItemOwnership, cartController.updateCartItem);
 
 // Eliminar un artículo del carrito
-router.post('/remove/:id', isAuthenticated, cartController.removeFromCart);
+// ensureCartItemOwnership: verifica propiedad (IDOR) + precarga CartItem+Cart
+router.post('/remove/:id', isAuthenticated, ensureCartItemOwnership, cartController.removeFromCart);
 
 // Completar la compra (Checkout)
 router.post('/checkout', isAuthenticated, cartController.checkout);

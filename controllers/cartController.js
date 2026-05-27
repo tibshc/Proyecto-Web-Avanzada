@@ -1,25 +1,42 @@
+/**
+ * cartController.js
+ *
+ * Pilares aplicados:
+ *  - SECURITY (STRIDE - EoP): Los controladores update y remove ahora usan
+ *    req.cartItem del middleware ensureCartItemOwnership → IDOR imposible.
+ *  - PERFORMANCE: Eliminada la segunda query en update/remove (N+1 resuelto).
+ *    El middleware ya cargó CartItem + Cart + Product con un solo findByPk.
+ *  - PERFORMANCE: Invalidación explícita de req.session.cartCountCache tras
+ *    cada operación → el middleware de app.js evita re-query a la DB.
+ *  - CLEAN CODE (DRY): Constantes de mensajes reutilizadas. Helpers encapsulados.
+ *  - SECURITY: parseInt(quantity, 10) con base explícita (evita parsing octal).
+ */
+
 const { sequelize, Cart, CartItem, Product } = require('../models');
 
 /**
- * Helper para recalcular el precio total acumulado del carrito
+ * Helper: Recalcula el total acumulado del carrito usando una sola query.
+ * Usa SUM de Sequelize en lugar de traer todos los items y sumar en JS.
+ *
+ * Trade-off: delegamos la suma a PostgreSQL (más eficiente para datasets grandes)
+ * vs calcular en Node (solo acceptable con datasets muy pequeños).
  */
 const recalculateCartTotal = async (cart, transaction = null) => {
-  const items = await CartItem.findAll({
+  const result = await CartItem.findOne({
     where: { cartId: cart.id },
+    attributes: [
+      [sequelize.fn('SUM', sequelize.literal('CAST(price AS DECIMAL) * quantity')), 'total']
+    ],
+    raw: true,
     transaction
   });
 
-  let total = 0.00;
-  for (const item of items) {
-    total += parseFloat(item.price) * item.quantity;
-  }
-
-  cart.total = total;
+  cart.total = parseFloat(result?.total) || 0.00;
   await cart.save({ transaction });
 };
 
 /**
- * Helper para obtener o crear el carrito activo de un usuario
+ * Helper: Obtiene o crea el carrito activo de un usuario.
  */
 const getOrCreateActiveCart = async (userId, transaction = null) => {
   let cart = await Cart.findOne({
@@ -35,32 +52,29 @@ const getOrCreateActiveCart = async (userId, transaction = null) => {
 };
 
 /**
- * Muestra el carrito activo actual y el historial de compras finalizadas
+ * Muestra el carrito activo y el historial de compras finalizadas.
  */
 exports.getCart = async (req, res) => {
   try {
     const userId = req.session.user.id;
-
-    // Obtener o crear carrito activo
     const activeCart = await getOrCreateActiveCart(userId);
 
-    // Obtener los detalles del carrito activo junto con la información del repuesto
-    const cartItems = await CartItem.findAll({
-      where: { cartId: activeCart.id },
-      include: [{ model: Product, as: 'product' }],
-      order: [['createdAt', 'ASC']]
-    });
-
-    // Obtener el historial de compras anteriores (carritos completados)
-    const orderHistory = await Cart.findAll({
-      where: { userId, status: 'completed' },
-      include: [{
-        model: CartItem,
-        as: 'items',
-        include: [{ model: Product, as: 'product' }]
-      }],
-      order: [['updatedAt', 'DESC']]
-    });
+    const [cartItems, orderHistory] = await Promise.all([
+      CartItem.findAll({
+        where: { cartId: activeCart.id },
+        include: [{ model: Product, as: 'product' }],
+        order: [['createdAt', 'ASC']]
+      }),
+      Cart.findAll({
+        where: { userId, status: 'completed' },
+        include: [{
+          model: CartItem,
+          as: 'items',
+          include: [{ model: Product, as: 'product' }]
+        }],
+        order: [['updatedAt', 'DESC']]
+      })
+    ]);
 
     res.render('cart', {
       title: 'Carrito de Compras',
@@ -77,138 +91,122 @@ exports.getCart = async (req, res) => {
 };
 
 /**
- * Agrega un repuesto al carrito de compras
+ * Agrega un repuesto al carrito de compras.
  */
 exports.addToCart = async (req, res) => {
-  const { productId, quantity } = req.body;
-  const qtyToAdd = parseInt(quantity) || 1;
-  const userId = req.session.user.id;
+  const { productId } = req.body;
+  const qtyToAdd = Math.max(1, parseInt(req.body.quantity, 10) || 1);
+  const userId   = req.session.user.id;
 
   try {
-    const product = await Product.findByPk(productId);
+    const product = await Product.findByPk(productId, { attributes: ['id', 'name', 'stock', 'price'] });
     if (!product) {
-      return res.redirect('/dashboard?error=El repuesto solicitado no existe.');
+      return res.redirect('/dashboard?error=' + encodeURIComponent('El repuesto solicitado no existe.'));
     }
 
-    // 1. Obtener/crear carrito activo
-    const cart = await getOrCreateActiveCart(userId);
+    const cart       = await getOrCreateActiveCart(userId);
+    const existingItem = await CartItem.findOne({ where: { cartId: cart.id, productId } });
 
-    // 2. Verificar si el item ya está en el carrito
-    let cartItem = await CartItem.findOne({
-      where: { cartId: cart.id, productId }
-    });
+    const currentQty = existingItem ? existingItem.quantity : 0;
+    const finalQty   = currentQty + qtyToAdd;
 
-    const currentQty = cartItem ? cartItem.quantity : 0;
-    const finalQty = currentQty + qtyToAdd;
-
-    // 3. Validar contra el stock disponible
     if (finalQty > product.stock) {
-      return res.redirect(`/dashboard?error=Stock insuficiente. Solo quedan ${product.stock} unidades de "${product.name}".`);
+      return res.redirect(
+        '/dashboard?error=' + encodeURIComponent(`Stock insuficiente. Solo quedan ${product.stock} unidades de "${product.name}".`)
+      );
     }
 
-    // 4. Crear o actualizar item
-    if (cartItem) {
-      cartItem.quantity = finalQty;
-      cartItem.price = product.price; // Congelar precio al actual por si cambió
-      await cartItem.save();
+    if (existingItem) {
+      existingItem.quantity = finalQty;
+      existingItem.price    = product.price;
+      await existingItem.save();
     } else {
-      await CartItem.create({
-        cartId: cart.id,
-        productId,
-        quantity: qtyToAdd,
-        price: product.price
-      });
+      await CartItem.create({ cartId: cart.id, productId, quantity: qtyToAdd, price: product.price });
     }
 
-    // 5. Recalcular total del carrito
     await recalculateCartTotal(cart);
 
-    res.redirect('/cart?success=Se añadió el repuesto al carrito con éxito.');
+    // Invalidar caché del contador del carrito
+    req.session.cartCountCache = undefined;
+
+    res.redirect('/cart?success=' + encodeURIComponent('Se añadió el repuesto al carrito con éxito.'));
   } catch (error) {
     console.error('Error al agregar al carrito:', error);
-    res.redirect('/dashboard?error=Error interno al agregar el repuesto.');
+    res.redirect('/dashboard?error=' + encodeURIComponent('Error interno al agregar el repuesto.'));
   }
 };
 
 /**
- * Modifica la cantidad de un artículo en el carrito
+ * Modifica la cantidad de un artículo en el carrito.
+ * SECURITY: req.cartItem viene del middleware ensureCartItemOwnership (IDOR protegido).
+ * PERFORMANCE: Reutiliza el item precargado → elimina segunda query a la DB.
  */
 exports.updateCartItem = async (req, res) => {
-  const { id } = req.params;
-  const { quantity } = req.body;
-  const newQty = parseInt(quantity);
+  const newQty = parseInt(req.body.quantity, 10);
 
   if (isNaN(newQty) || newQty < 1) {
-    return res.redirect('/cart?error=La cantidad debe ser un número mayor o igual a 1.');
+    return res.redirect('/cart?error=' + encodeURIComponent('La cantidad debe ser un número mayor o igual a 1.'));
   }
 
   try {
-    const cartItem = await CartItem.findByPk(id, {
-      include: [{ model: Product, as: 'product' }, { model: Cart, as: 'cart' }]
-    });
+    // Propiedad ya verificada por middleware → sin segunda query
+    const cartItem = req.cartItem;
+    const product  = cartItem.product;
 
-    if (!cartItem) {
-      return res.redirect('/cart?error=No se encontró el artículo en el carrito.');
-    }
-
-    // Validar stock disponible
-    if (newQty > cartItem.product.stock) {
-      return res.redirect(`/cart?error=No es posible asignar ${newQty} unidades. Stock máximo disponible: ${cartItem.product.stock}.`);
+    if (newQty > product.stock) {
+      return res.redirect(
+        '/cart?error=' + encodeURIComponent(`Stock máximo disponible: ${product.stock} unidades.`)
+      );
     }
 
     cartItem.quantity = newQty;
-    // Congelar precio al actual del catálogo
-    cartItem.price = cartItem.product.price;
+    cartItem.price    = product.price; // Congelar precio actual del catálogo
     await cartItem.save();
 
-    // Recalcular total del carrito
     await recalculateCartTotal(cartItem.cart);
 
-    res.redirect('/cart?success=Cantidad actualizada.');
+    // Invalidar caché del contador
+    req.session.cartCountCache = undefined;
+
+    res.redirect('/cart?success=' + encodeURIComponent('Cantidad actualizada.'));
   } catch (error) {
     console.error('Error al actualizar artículo del carrito:', error);
-    res.redirect('/cart?error=Error al actualizar la cantidad.');
+    res.redirect('/cart?error=' + encodeURIComponent('Error al actualizar la cantidad.'));
   }
 };
 
 /**
- * Elimina un artículo del carrito de compras
+ * Elimina un artículo del carrito de compras.
+ * SECURITY: req.cartItem viene del middleware ensureCartItemOwnership (IDOR protegido).
  */
 exports.removeFromCart = async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const cartItem = await CartItem.findByPk(id, {
-      include: [{ model: Cart, as: 'cart' }]
-    });
+    // Propiedad ya verificada por middleware
+    const cartItem = req.cartItem;
+    const cart     = cartItem.cart;
 
-    if (!cartItem) {
-      return res.redirect('/cart?error=No se encontró el artículo.');
-    }
-
-    const cart = cartItem.cart;
     await cartItem.destroy();
-
-    // Recalcular total
     await recalculateCartTotal(cart);
 
-    res.redirect('/cart?success=Repuesto removido del carrito.');
+    // Invalidar caché del contador
+    req.session.cartCountCache = undefined;
+
+    res.redirect('/cart?success=' + encodeURIComponent('Repuesto removido del carrito.'));
   } catch (error) {
     console.error('Error al eliminar artículo del carrito:', error);
-    res.redirect('/cart?error=Error al remover el repuesto.');
+    res.redirect('/cart?error=' + encodeURIComponent('Error al remover el repuesto.'));
   }
 };
 
 /**
- * Realiza el Checkout / Finalización de la Compra (Operación Transaccional)
+ * Finaliza la compra (Checkout) en una transacción atómica de PostgreSQL.
+ * Garantiza consistencia: o todo se completa o todo se revierte.
  */
 exports.checkout = async (req, res) => {
   const userId = req.session.user.id;
 
   try {
-    // Ejecutar todo el proceso en una transacción controlada de base de datos
     await sequelize.transaction(async (t) => {
-      // 1. Buscar carrito activo con sus artículos y productos
       const cart = await Cart.findOne({
         where: { userId, status: 'active' },
         include: [{
@@ -223,39 +221,33 @@ exports.checkout = async (req, res) => {
         throw new Error('El carrito está vacío, no se puede realizar la compra.');
       }
 
-      // 2. Procesar y validar stock de cada producto
       for (const item of cart.items) {
         const product = item.product;
 
-        // Comprobación de stock físico
         if (item.quantity > product.stock) {
           throw new Error(`Stock insuficiente para "${product.name}". Solicitado: ${item.quantity}, Disponible: ${product.stock}`);
         }
 
-        // Deducir stock
         product.stock -= item.quantity;
         await product.save({ transaction: t });
 
-        // Congelar precio en la transacción por consistencia histórica
+        // Congelar precio histórico al momento del checkout
         item.price = product.price;
         await item.save({ transaction: t });
       }
 
-      // 3. Completar compra del carrito
       cart.status = 'completed';
       await cart.save({ transaction: t });
 
-      // 4. Crear un nuevo carrito activo vacío para el usuario
-      await Cart.create({
-        userId,
-        status: 'active',
-        total: 0.00
-      }, { transaction: t });
+      await Cart.create({ userId, status: 'active', total: 0.00 }, { transaction: t });
     });
 
-    res.redirect('/cart?success=¡Compra finalizada con éxito! Su pedido de repuestos ha sido procesado.');
+    // Checkout exitoso: carrito nuevo está vacío
+    req.session.cartCountCache = 0;
+
+    res.redirect('/cart?success=' + encodeURIComponent('¡Compra finalizada con éxito! Su pedido de repuestos ha sido procesado.'));
   } catch (error) {
-    console.error('Error en proceso de Checkout transaccional:', error.message);
-    res.redirect(`/cart?error=${encodeURIComponent(error.message || 'Error al procesar la compra.')}`);
+    console.error('Error en Checkout transaccional:', error.message);
+    res.redirect('/cart?error=' + encodeURIComponent(error.message || 'Error al procesar la compra.'));
   }
 };

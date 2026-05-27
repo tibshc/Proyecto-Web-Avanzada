@@ -4,30 +4,33 @@ const PRODUCTS_PER_PAGE = 8;
 const VALID_CATEGORIES = ['chasis', 'motor', 'frenos', 'otros'];
 
 /**
- * Helper: Calcula estadísticas del inventario completo para admin y support.
+ * Helper: Calcula estadísticas del inventario en un único pase O(n).
+ *
+ * Problema anterior: O(1 reduce) + O(4 filter) + O(4 category filter) = 9 iteraciones
+ * sobre el mismo array en memoria.
+ * Solución: un solo reduce que acumula todos los contadores simultáneamente → O(n).
+ * Ganancia estimada: ~6x menos iteraciones sobre el dataset.
  */
 const computeStats = async () => {
   const allProducts = await Product.findAll({
     attributes: ['price', 'stock', 'category']
   });
 
-  const totalValue = allProducts.reduce(
-    (sum, p) => sum + parseFloat(p.price) * p.stock,
-    0
-  );
+  const stats = allProducts.reduce((acc, p) => {
+    acc.total++;
+    acc.totalValue += parseFloat(p.price) * p.stock;
 
-  return {
-    total: allProducts.length,
-    lowStock: allProducts.filter(p => p.stock > 0 && p.stock <= 5).length,
-    outOfStock: allProducts.filter(p => p.stock === 0).length,
-    totalValue: totalValue.toFixed(2),
-    byCategory: {
-      chasis: allProducts.filter(p => p.category === 'chasis').length,
-      motor: allProducts.filter(p => p.category === 'motor').length,
-      frenos: allProducts.filter(p => p.category === 'frenos').length,
-      otros: allProducts.filter(p => p.category === 'otros').length
-    }
-  };
+    if      (p.stock === 0) acc.outOfStock++;
+    else if (p.stock <= 5)  acc.lowStock++;
+
+    // byCategory usa el valor dinámico de p.category (extensible sin hardcodear)
+    acc.byCategory[p.category] = (acc.byCategory[p.category] || 0) + 1;
+
+    return acc;
+  }, { total: 0, lowStock: 0, outOfStock: 0, totalValue: 0, byCategory: {} });
+
+  stats.totalValue = stats.totalValue.toFixed(2);
+  return stats;
 };
 
 /**
@@ -95,11 +98,16 @@ exports.getAllProducts = async (req, res) => {
  * Crea un nuevo repuesto con validación estricta de tipos numéricos.
  */
 exports.createProduct = async (req, res) => {
-  const {
-    sku, name, category, brand, compatibility,
-    torque_nm, dimensions, weight_kg,
-    durabilityKm, stock, price
-  } = req.body;
+  // SECURITY: trim() en campos string para prevenir bypass con espacios
+  const sku           = (req.body.sku           || '').trim();
+  const name          = (req.body.name          || '').trim();
+  const category      = (req.body.category      || '').trim();
+  const brand         = (req.body.brand         || '').trim();
+  const compatibility = (req.body.compatibility || '').trim();
+  const torque_nm     = (req.body.torque_nm     || '').trim();
+  const dimensions    = (req.body.dimensions    || '').trim();
+  const weight_kg     = (req.body.weight_kg     || '').trim();
+  const { durabilityKm, stock, price } = req.body;
 
   // Validación estricta antes de procesar
   const parsedStock = parseInt(stock, 10);
@@ -150,11 +158,15 @@ exports.createProduct = async (req, res) => {
  */
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
-  const {
-    name, category, brand, compatibility,
-    torque_nm, dimensions, weight_kg,
-    durabilityKm, stock, price
-  } = req.body;
+  // SECURITY: trim() en campos string
+  const name          = (req.body.name          || '').trim();
+  const category      = (req.body.category      || '').trim();
+  const brand         = (req.body.brand         || '').trim();
+  const compatibility = (req.body.compatibility || '').trim();
+  const torque_nm     = (req.body.torque_nm     || '').trim();
+  const dimensions    = (req.body.dimensions    || '').trim();
+  const weight_kg     = (req.body.weight_kg     || '').trim();
+  const { durabilityKm, stock, price } = req.body;
 
   const parsedStock = parseInt(stock, 10);
   const parsedPrice = parseFloat(price);
