@@ -38,14 +38,19 @@ exports.flashMiddleware = (req, res, next) => {
     req.session.flash[type] = message;
   };
 
-  // Consumir y exponer en res.locals (disponibles en la vista del siguiente render)
-  const pending = req.session.flash || {};
+  // BUG 3 FIX: Capturar snapshot de los mensajes pendientes ANTES de limpiar.
+  // Se clona el objeto para no perder mensajes escritos en este mismo request.
+  const pending = { ...req.session.flash };
+
+  // Exponer en res.locals (disponibles en la vista del siguiente render)
   res.locals.success = pending.success || null;
   res.locals.error   = pending.error   || null;
   res.locals.info    = pending.info    || null;
 
-  // Limpiar flash de la sesión tras consumir (son de un solo uso)
-  req.session.flash = {};
+  // Limpiar solo los mensajes que fueron consumidos (no los nuevos del request actual)
+  delete req.session.flash.success;
+  delete req.session.flash.error;
+  delete req.session.flash.info;
 
   next();
 };

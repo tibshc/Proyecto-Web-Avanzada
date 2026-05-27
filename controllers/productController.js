@@ -146,7 +146,7 @@ exports.getAllProducts = async (req, res) => {
   try {
     const { count, rows: products } = await Product.findAndCountAll({
       where,
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']], // BUG 5 FIX: camelCase para Sequelize underscored:true
       limit:  PRODUCTS_PER_PAGE,
       offset: (page - 1) * PRODUCTS_PER_PAGE
     });

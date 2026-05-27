@@ -16,7 +16,9 @@ const { sequelize, Cart, CartItem, Product } = require('../models');
  * Helper: Recalcula el total del carrito delegando la suma a PostgreSQL.
  */
 const recalculateCartTotal = async (cart, transaction = null) => {
-  const result = await CartItem.findOne({
+  // BUG 7 FIX: findOne con SUM es incorrecto (LIMIT 1 interfiere con el agregado).
+  // Se usa findAll con raw:true para obtener el resultado del SUM correctamente.
+  const [result] = await CartItem.findAll({
     where: { cartId: cart.id },
     attributes: [
       [sequelize.fn('SUM', sequelize.literal('CAST(price AS DECIMAL) * quantity')), 'total']

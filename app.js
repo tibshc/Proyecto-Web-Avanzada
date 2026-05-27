@@ -5,6 +5,9 @@ const SequelizeStore = require('connect-session-sequelize')(session.Store);
 const { sequelize, Cart, CartItem } = require('./models');
 require('dotenv').config();
 
+// Importación de Middlewares
+const { flashMiddleware } = require('./middlewares/flashMiddleware');
+
 // Importación de Rutas
 const authRoutes      = require('./routes/auth');
 const dashboardRoutes = require('./routes/product');
@@ -85,6 +88,10 @@ app.use(session({
 }));
 
 sessionStore.sync();
+
+// BUG 2 FIX: Registrar flashMiddleware ANTES de las rutas y DESPUÉS de session
+// Sin esto, req.flash() no existe y todos los controladores crashan en runtime.
+app.use(flashMiddleware);
 
 // ============================================================
 // PERFORMANCE: Middleware de cart count con caché en sesión

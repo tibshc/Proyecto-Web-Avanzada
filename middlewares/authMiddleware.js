@@ -61,7 +61,9 @@ exports.ensureCartItemOwnership = async (req, res, next) => {
   const userId = req.session?.user?.id;
 
   if (!id || !userId) {
-    return res.redirect('/cart?error=' + encodeURIComponent('Solicitud no válida.'));
+    // BUG 4 FIX: usar req.flash() en lugar de ?error= en la URL
+    req.flash('error', 'Solicitud no válida.');
+    return res.redirect('/cart');
   }
 
   try {
@@ -73,20 +75,23 @@ exports.ensureCartItemOwnership = async (req, res, next) => {
     });
 
     if (!item) {
-      return res.redirect('/cart?error=' + encodeURIComponent('Artículo no encontrado.'));
+      req.flash('error', 'Artículo no encontrado.');
+      return res.redirect('/cart');
     }
 
     // IDOR check: el carrito del item debe pertenecer al usuario autenticado
     if (item.cart.userId !== userId) {
       // Log de intento sospechoso para auditoría (STRIDE - Repudiation)
       console.warn(`[SECURITY] Intento de IDOR bloqueado: user=${userId} intentó acceder a cartItem=${id} de user=${item.cart.userId}`);
-      return res.redirect('/cart?error=' + encodeURIComponent('Acceso no autorizado.'));
+      req.flash('error', 'Acceso no autorizado.');
+      return res.redirect('/cart');
     }
 
     req.cartItem = item; // Pasar al siguiente middleware/controlador sin re-query
     next();
   } catch (err) {
     console.error('Error en ensureCartItemOwnership:', err);
-    res.redirect('/cart?error=' + encodeURIComponent('Error al verificar el artículo.'));
+    req.flash('error', 'Error al verificar el artículo.');
+    res.redirect('/cart');
   }
 };
