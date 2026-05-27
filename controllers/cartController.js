@@ -1,25 +1,19 @@
 /**
- * cartController.js
- *
- * Pilares aplicados:
- *  - SECURITY (STRIDE - EoP): Los controladores update y remove ahora usan
+ * Mejoras implementadas:
+ *  - FLASH: Todos los redirect con ?error/success reemplazados por req.flash()
+ *    → mensajes no expuestos en la URL, no repetibles al recargar la página.
+ *  - SECURITY (STRIDE - EoP): Los controladores update y remove usan
  *    req.cartItem del middleware ensureCartItemOwnership → IDOR imposible.
  *  - PERFORMANCE: Eliminada la segunda query en update/remove (N+1 resuelto).
- *    El middleware ya cargó CartItem + Cart + Product con un solo findByPk.
- *  - PERFORMANCE: Invalidación explícita de req.session.cartCountCache tras
- *    cada operación → el middleware de app.js evita re-query a la DB.
+ *  - PERFORMANCE: Invalidación explícita de req.session.cartCountCache.
  *  - CLEAN CODE (DRY): Constantes de mensajes reutilizadas. Helpers encapsulados.
- *  - SECURITY: parseInt(quantity, 10) con base explícita (evita parsing octal).
+ *  - SECURITY: parseInt(quantity, 10) con base explícita.
  */
 
 const { sequelize, Cart, CartItem, Product } = require('../models');
 
 /**
- * Helper: Recalcula el total acumulado del carrito usando una sola query.
- * Usa SUM de Sequelize en lugar de traer todos los items y sumar en JS.
- *
- * Trade-off: delegamos la suma a PostgreSQL (más eficiente para datasets grandes)
- * vs calcular en Node (solo acceptable con datasets muy pequeños).
+ * Helper: Recalcula el total del carrito delegando la suma a PostgreSQL.
  */
 const recalculateCartTotal = async (cart, transaction = null) => {
   const result = await CartItem.findOne({
@@ -56,33 +50,29 @@ const getOrCreateActiveCart = async (userId, transaction = null) => {
  */
 exports.getCart = async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId    = req.session.user.id;
     const activeCart = await getOrCreateActiveCart(userId);
 
     const [cartItems, orderHistory] = await Promise.all([
       CartItem.findAll({
-        where: { cartId: activeCart.id },
+        where:   { cartId: activeCart.id },
         include: [{ model: Product, as: 'product' }],
-        order: [['createdAt', 'ASC']]
+        order:   [['createdAt', 'ASC']]
       }),
       Cart.findAll({
-        where: { userId, status: 'completed' },
-        include: [{
-          model: CartItem,
-          as: 'items',
-          include: [{ model: Product, as: 'product' }]
-        }],
-        order: [['updatedAt', 'DESC']]
+        where:   { userId, status: 'completed' },
+        include: [{ model: CartItem, as: 'items', include: [{ model: Product, as: 'product' }] }],
+        order:   [['updatedAt', 'DESC']]
       })
     ]);
 
     res.render('cart', {
-      title: 'Carrito de Compras',
-      cart: activeCart,
-      items: cartItems,
+      title:   'Carrito de Compras',
+      cart:    activeCart,
+      items:   cartItems,
       history: orderHistory,
-      error: req.query.error || null,
-      success: req.query.success || null
+      error:   res.locals.error   || null,
+      success: res.locals.success || null
     });
   } catch (error) {
     console.error('Error al obtener el carrito:', error);
@@ -95,25 +85,25 @@ exports.getCart = async (req, res) => {
  */
 exports.addToCart = async (req, res) => {
   const { productId } = req.body;
-  const qtyToAdd = Math.max(1, parseInt(req.body.quantity, 10) || 1);
-  const userId   = req.session.user.id;
+  const qtyToAdd      = Math.max(1, parseInt(req.body.quantity, 10) || 1);
+  const userId        = req.session.user.id;
 
   try {
     const product = await Product.findByPk(productId, { attributes: ['id', 'name', 'stock', 'price'] });
     if (!product) {
-      return res.redirect('/dashboard?error=' + encodeURIComponent('El repuesto solicitado no existe.'));
+      req.flash('error', 'El repuesto solicitado no existe.');
+      return res.redirect('/dashboard');
     }
 
-    const cart       = await getOrCreateActiveCart(userId);
+    const cart         = await getOrCreateActiveCart(userId);
     const existingItem = await CartItem.findOne({ where: { cartId: cart.id, productId } });
 
     const currentQty = existingItem ? existingItem.quantity : 0;
     const finalQty   = currentQty + qtyToAdd;
 
     if (finalQty > product.stock) {
-      return res.redirect(
-        '/dashboard?error=' + encodeURIComponent(`Stock insuficiente. Solo quedan ${product.stock} unidades de "${product.name}".`)
-      );
+      req.flash('error', `Stock insuficiente. Solo quedan ${product.stock} unidades de "${product.name}".`);
+      return res.redirect('/dashboard');
     }
 
     if (existingItem) {
@@ -125,53 +115,51 @@ exports.addToCart = async (req, res) => {
     }
 
     await recalculateCartTotal(cart);
-
-    // Invalidar caché del contador del carrito
     req.session.cartCountCache = undefined;
 
-    res.redirect('/cart?success=' + encodeURIComponent('Se añadió el repuesto al carrito con éxito.'));
+    req.flash('success', 'Se añadió el repuesto al carrito con éxito.');
+    res.redirect('/cart');
   } catch (error) {
     console.error('Error al agregar al carrito:', error);
-    res.redirect('/dashboard?error=' + encodeURIComponent('Error interno al agregar el repuesto.'));
+    req.flash('error', 'Error interno al agregar el repuesto.');
+    res.redirect('/dashboard');
   }
 };
 
 /**
  * Modifica la cantidad de un artículo en el carrito.
  * SECURITY: req.cartItem viene del middleware ensureCartItemOwnership (IDOR protegido).
- * PERFORMANCE: Reutiliza el item precargado → elimina segunda query a la DB.
  */
 exports.updateCartItem = async (req, res) => {
   const newQty = parseInt(req.body.quantity, 10);
 
   if (isNaN(newQty) || newQty < 1) {
-    return res.redirect('/cart?error=' + encodeURIComponent('La cantidad debe ser un número mayor o igual a 1.'));
+    req.flash('error', 'La cantidad debe ser un número mayor o igual a 1.');
+    return res.redirect('/cart');
   }
 
   try {
-    // Propiedad ya verificada por middleware → sin segunda query
     const cartItem = req.cartItem;
     const product  = cartItem.product;
 
     if (newQty > product.stock) {
-      return res.redirect(
-        '/cart?error=' + encodeURIComponent(`Stock máximo disponible: ${product.stock} unidades.`)
-      );
+      req.flash('error', `Stock máximo disponible: ${product.stock} unidades.`);
+      return res.redirect('/cart');
     }
 
     cartItem.quantity = newQty;
-    cartItem.price    = product.price; // Congelar precio actual del catálogo
+    cartItem.price    = product.price;
     await cartItem.save();
 
     await recalculateCartTotal(cartItem.cart);
-
-    // Invalidar caché del contador
     req.session.cartCountCache = undefined;
 
-    res.redirect('/cart?success=' + encodeURIComponent('Cantidad actualizada.'));
+    req.flash('success', 'Cantidad actualizada.');
+    res.redirect('/cart');
   } catch (error) {
     console.error('Error al actualizar artículo del carrito:', error);
-    res.redirect('/cart?error=' + encodeURIComponent('Error al actualizar la cantidad.'));
+    req.flash('error', 'Error al actualizar la cantidad.');
+    res.redirect('/cart');
   }
 };
 
@@ -181,26 +169,24 @@ exports.updateCartItem = async (req, res) => {
  */
 exports.removeFromCart = async (req, res) => {
   try {
-    // Propiedad ya verificada por middleware
     const cartItem = req.cartItem;
     const cart     = cartItem.cart;
 
     await cartItem.destroy();
     await recalculateCartTotal(cart);
-
-    // Invalidar caché del contador
     req.session.cartCountCache = undefined;
 
-    res.redirect('/cart?success=' + encodeURIComponent('Repuesto removido del carrito.'));
+    req.flash('success', 'Repuesto removido del carrito.');
+    res.redirect('/cart');
   } catch (error) {
     console.error('Error al eliminar artículo del carrito:', error);
-    res.redirect('/cart?error=' + encodeURIComponent('Error al remover el repuesto.'));
+    req.flash('error', 'Error al remover el repuesto.');
+    res.redirect('/cart');
   }
 };
 
 /**
  * Finaliza la compra (Checkout) en una transacción atómica de PostgreSQL.
- * Garantiza consistencia: o todo se completa o todo se revierte.
  */
 exports.checkout = async (req, res) => {
   const userId = req.session.user.id;
@@ -208,12 +194,8 @@ exports.checkout = async (req, res) => {
   try {
     await sequelize.transaction(async (t) => {
       const cart = await Cart.findOne({
-        where: { userId, status: 'active' },
-        include: [{
-          model: CartItem,
-          as: 'items',
-          include: [{ model: Product, as: 'product' }]
-        }],
+        where:   { userId, status: 'active' },
+        include: [{ model: CartItem, as: 'items', include: [{ model: Product, as: 'product' }] }],
         transaction: t
       });
 
@@ -231,7 +213,6 @@ exports.checkout = async (req, res) => {
         product.stock -= item.quantity;
         await product.save({ transaction: t });
 
-        // Congelar precio histórico al momento del checkout
         item.price = product.price;
         await item.save({ transaction: t });
       }
@@ -242,12 +223,12 @@ exports.checkout = async (req, res) => {
       await Cart.create({ userId, status: 'active', total: 0.00 }, { transaction: t });
     });
 
-    // Checkout exitoso: carrito nuevo está vacío
     req.session.cartCountCache = 0;
-
-    res.redirect('/cart?success=' + encodeURIComponent('¡Compra finalizada con éxito! Su pedido de repuestos ha sido procesado.'));
+    req.flash('success', '¡Compra finalizada con éxito! Su pedido de repuestos ha sido procesado.');
+    res.redirect('/cart');
   } catch (error) {
     console.error('Error en Checkout transaccional:', error.message);
-    res.redirect('/cart?error=' + encodeURIComponent(error.message || 'Error al procesar la compra.'));
+    req.flash('error', error.message || 'Error al procesar la compra.');
+    res.redirect('/cart');
   }
 };

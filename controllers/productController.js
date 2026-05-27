@@ -1,15 +1,56 @@
+/**
+ * productController.js
+ *
+ * Mejoras implementadas:
+ *  - FEATURE: Búsqueda server-side por nombre, SKU, marca y compatibilidad
+ *    usando Op.iLike de Sequelize (case-insensitive en PostgreSQL).
+ *    Problema anterior: el filtro solo operaba sobre los 8 productos de la
+ *    página actual (client-side). Ahora busca en toda la base de datos.
+ *  - REFACTOR (DRY): Lógica de validación numérica extraída a validateProductBody().
+ *    Eliminada duplicación entre createProduct y updateProduct (~30 líneas).
+ *  - FLASH: Reemplazados los redirect con ?error/success en la URL por req.flash()
+ *    → mensajes no visibles en la barra de dirección, no repetibles con F5.
+ *  - CLEAN CODE: Extraído buildWhereClause() para separar lógica de filtrado.
+ */
+const { Op } = require('sequelize');
 const { Product } = require('../models');
 
 const PRODUCTS_PER_PAGE = 8;
-const VALID_CATEGORIES = ['chasis', 'motor', 'frenos', 'otros'];
+const VALID_CATEGORIES  = ['chasis', 'motor', 'frenos', 'otros'];
+
+// ============================================================
+// Helpers privados
+// ============================================================
 
 /**
- * Helper: Calcula estadísticas del inventario en un único pase O(n).
- *
- * Problema anterior: O(1 reduce) + O(4 filter) + O(4 category filter) = 9 iteraciones
- * sobre el mismo array en memoria.
- * Solución: un solo reduce que acumula todos los contadores simultáneamente → O(n).
- * Ganancia estimada: ~6x menos iteraciones sobre el dataset.
+ * Construye la cláusula WHERE de Sequelize según los filtros activos.
+ * @param {string|null} category - Categoría validada o null.
+ * @param {string}      search   - Término de búsqueda (puede ser vacío).
+ * @returns {object} Cláusula where para findAndCountAll.
+ */
+const buildWhereClause = (category, search) => {
+  const where = {};
+
+  if (category) {
+    where.category = category;
+  }
+
+  if (search) {
+    const pattern = `%${search}%`;
+    where[Op.or] = [
+      { name:          { [Op.iLike]: pattern } },
+      { sku:           { [Op.iLike]: pattern } },
+      { brand:         { [Op.iLike]: pattern } },
+      { compatibility: { [Op.iLike]: pattern } }
+    ];
+  }
+
+  return where;
+};
+
+/**
+ * Calcula estadísticas del inventario en un único pase O(n).
+ * Solo se invoca para roles admin/support.
  */
 const computeStats = async () => {
   const allProducts = await Product.findAll({
@@ -23,7 +64,6 @@ const computeStats = async () => {
     if      (p.stock === 0) acc.outOfStock++;
     else if (p.stock <= 5)  acc.lowStock++;
 
-    // byCategory usa el valor dinámico de p.category (extensible sin hardcodear)
     acc.byCategory[p.category] = (acc.byCategory[p.category] || 0) + 1;
 
     return acc;
@@ -34,31 +74,86 @@ const computeStats = async () => {
 };
 
 /**
- * Obtiene los repuestos (paginados y filtrados por categoría) y renderiza el Dashboard.
- * Soporta: ?page=N, ?category=X, ?error=msg, ?success=msg
+ * Valida y parsea los campos numéricos y de texto del body de un producto.
+ * DRY: evita duplicar la misma lógica en createProduct y updateProduct.
+ *
+ * @returns {{ valid: boolean, errorMsg?: string, data?: object }}
+ */
+const validateProductBody = (body) => {
+  const sku           = (body.sku           || '').trim();
+  const name          = (body.name          || '').trim();
+  const category      = (body.category      || '').trim();
+  const brand         = (body.brand         || '').trim();
+  const compatibility = (body.compatibility || '').trim();
+  const torque_nm     = (body.torque_nm     || '').trim();
+  const dimensions    = (body.dimensions    || '').trim();
+  const weight_kg     = (body.weight_kg     || '').trim();
+
+  const parsedStock      = parseInt(body.stock,        10);
+  const parsedPrice      = parseFloat(body.price);
+  const parsedDurability = parseInt(body.durabilityKm, 10);
+
+  if (isNaN(parsedStock) || parsedStock < 0) {
+    return { valid: false, errorMsg: 'El stock debe ser un número entero no negativo.' };
+  }
+  if (isNaN(parsedPrice) || parsedPrice < 0) {
+    return { valid: false, errorMsg: 'El precio debe ser un valor numérico positivo.' };
+  }
+  if (!VALID_CATEGORIES.includes(category)) {
+    return { valid: false, errorMsg: 'La categoría seleccionada no es válida.' };
+  }
+
+  return {
+    valid: true,
+    data: {
+      sku,
+      name,
+      category,
+      brand,
+      compatibility,
+      technicalSpecs: {
+        torque_nm:  torque_nm  || 'N/A',
+        dimensions: dimensions || 'N/A',
+        weight_kg:  weight_kg  || 'N/A'
+      },
+      durabilityKm: isNaN(parsedDurability) ? 100000 : parsedDurability,
+      stock: parsedStock,
+      price: parsedPrice
+    }
+  };
+};
+
+// ============================================================
+// Controladores
+// ============================================================
+
+/**
+ * Obtiene los repuestos (paginados, filtrados y buscados) y renderiza el Dashboard.
+ * Soporta: ?page=N  ?category=X  ?search=texto
+ *
+ * MEJORA: el parámetro ?search ahora se envía a la DB (Op.iLike) en lugar de
+ * filtrarse en el cliente sobre los 8 resultados de la página actual.
  */
 exports.getAllProducts = async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-  const category = req.query.category || null;
-  const activeCategory = VALID_CATEGORIES.includes(category) ? category : null;
+  const page           = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const rawCategory    = req.query.category || null;
+  const activeCategory = VALID_CATEGORIES.includes(rawCategory) ? rawCategory : null;
+  // Sanitizar el término de búsqueda: recortar espacios y limitar longitud
+  const search = (req.query.search || '').trim().substring(0, 100);
 
-  const where = {};
-  if (activeCategory) {
-    where.category = activeCategory;
-  }
+  const where = buildWhereClause(activeCategory, search);
 
   try {
     const { count, rows: products } = await Product.findAndCountAll({
       where,
       order: [['created_at', 'DESC']],
-      limit: PRODUCTS_PER_PAGE,
+      limit:  PRODUCTS_PER_PAGE,
       offset: (page - 1) * PRODUCTS_PER_PAGE
     });
 
-    const totalPages = Math.max(1, Math.ceil(count / PRODUCTS_PER_PAGE));
+    const totalPages  = Math.max(1, Math.ceil(count / PRODUCTS_PER_PAGE));
     const currentPage = Math.min(page, totalPages);
 
-    // Estadísticas solo para roles privilegiados
     let stats = null;
     const { role } = req.session.user;
     if (role === 'admin' || role === 'support') {
@@ -68,150 +163,109 @@ exports.getAllProducts = async (req, res) => {
     res.render('dashboard', {
       title: 'Catálogo de Repuestos',
       products,
-      user: req.session.user,
-      error: req.query.error || null,
-      success: req.query.success || null,
+      user:            req.session.user,
+      // Flash messages consumidos por flashMiddleware (ya en res.locals),
+      // pero también mantenemos compatibilidad con los que vienen de render directo.
+      error:           res.locals.error   || null,
+      success:         res.locals.success || null,
       currentPage,
       totalPages,
-      totalCount: count,
+      totalCount:      count,
       currentCategory: activeCategory,
+      currentSearch:   search,
       stats
     });
   } catch (error) {
     console.error('Error al obtener productos:', error);
     res.render('dashboard', {
       title: 'Catálogo de Repuestos',
-      products: [],
-      user: req.session.user,
-      error: 'Error al cargar el inventario de repuestos.',
-      success: null,
-      currentPage: 1,
-      totalPages: 1,
-      totalCount: 0,
+      products:        [],
+      user:            req.session.user,
+      error:           'Error al cargar el inventario de repuestos.',
+      success:         null,
+      currentPage:     1,
+      totalPages:      1,
+      totalCount:      0,
       currentCategory: null,
-      stats: null
+      currentSearch:   '',
+      stats:           null
     });
   }
 };
 
 /**
- * Crea un nuevo repuesto con validación estricta de tipos numéricos.
+ * Crea un nuevo repuesto.
+ * REFACTOR: usa validateProductBody() — eliminada duplicación con updateProduct.
+ * FLASH: usa req.flash() en lugar de ?error= en la URL.
  */
 exports.createProduct = async (req, res) => {
-  // SECURITY: trim() en campos string para prevenir bypass con espacios
-  const sku           = (req.body.sku           || '').trim();
-  const name          = (req.body.name          || '').trim();
-  const category      = (req.body.category      || '').trim();
-  const brand         = (req.body.brand         || '').trim();
-  const compatibility = (req.body.compatibility || '').trim();
-  const torque_nm     = (req.body.torque_nm     || '').trim();
-  const dimensions    = (req.body.dimensions    || '').trim();
-  const weight_kg     = (req.body.weight_kg     || '').trim();
-  const { durabilityKm, stock, price } = req.body;
+  const validation = validateProductBody(req.body);
 
-  // Validación estricta antes de procesar
-  const parsedStock = parseInt(stock, 10);
-  const parsedPrice = parseFloat(price);
-  const parsedDurability = parseInt(durabilityKm, 10);
-
-  if (isNaN(parsedStock) || parsedStock < 0) {
-    return res.redirect('/dashboard?error=' + encodeURIComponent('El stock debe ser un número entero no negativo.'));
-  }
-  if (isNaN(parsedPrice) || parsedPrice < 0) {
-    return res.redirect('/dashboard?error=' + encodeURIComponent('El precio debe ser un valor numérico positivo.'));
+  if (!validation.valid) {
+    req.flash('error', validation.errorMsg);
+    return res.redirect('/dashboard');
   }
 
   try {
-    await Product.create({
-      sku,
-      name,
-      category,
-      brand,
-      compatibility,
-      technicalSpecs: {
-        torque_nm: torque_nm || 'N/A',
-        dimensions: dimensions || 'N/A',
-        weight_kg: weight_kg || 'N/A'
-      },
-      durabilityKm: isNaN(parsedDurability) ? 100000 : parsedDurability,
-      stock: parsedStock,
-      price: parsedPrice
-    });
+    await Product.create(validation.data);
 
-    // F4: Notificar a todos los clientes del dashboard via Socket.IO
     const io = req.app.get('io');
-    if (io) io.emit('product_update', { type: 'created', productName: name });
+    if (io) io.emit('product_update', { type: 'created', productName: validation.data.name });
 
-    res.redirect('/dashboard?success=' + encodeURIComponent('Repuesto registrado con éxito en el catálogo.'));
+    req.flash('success', 'Repuesto registrado con éxito en el catálogo.');
+    res.redirect('/dashboard');
   } catch (error) {
     console.error('Error al crear repuesto:', error);
     let errorMessage = 'Error al registrar el repuesto.';
     if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
       errorMessage = error.errors.map(e => e.message).join('. ');
     }
-    res.redirect('/dashboard?error=' + encodeURIComponent(errorMessage));
+    req.flash('error', errorMessage);
+    res.redirect('/dashboard');
   }
 };
 
 /**
- * Actualiza un repuesto existente con validación estricta de tipos numéricos.
+ * Actualiza un repuesto existente.
+ * REFACTOR: usa validateProductBody() — sin duplicación de código.
+ * FLASH: usa req.flash() en lugar de ?error= en la URL.
  */
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
-  // SECURITY: trim() en campos string
-  const name          = (req.body.name          || '').trim();
-  const category      = (req.body.category      || '').trim();
-  const brand         = (req.body.brand         || '').trim();
-  const compatibility = (req.body.compatibility || '').trim();
-  const torque_nm     = (req.body.torque_nm     || '').trim();
-  const dimensions    = (req.body.dimensions    || '').trim();
-  const weight_kg     = (req.body.weight_kg     || '').trim();
-  const { durabilityKm, stock, price } = req.body;
+  const validation = validateProductBody(req.body);
 
-  const parsedStock = parseInt(stock, 10);
-  const parsedPrice = parseFloat(price);
-  const parsedDurability = parseInt(durabilityKm, 10);
-
-  if (isNaN(parsedStock) || parsedStock < 0) {
-    return res.redirect('/dashboard?error=' + encodeURIComponent('El stock debe ser un número entero no negativo.'));
-  }
-  if (isNaN(parsedPrice) || parsedPrice < 0) {
-    return res.redirect('/dashboard?error=' + encodeURIComponent('El precio debe ser un valor numérico positivo.'));
+  if (!validation.valid) {
+    req.flash('error', validation.errorMsg);
+    return res.redirect('/dashboard');
   }
 
   try {
     const product = await Product.findByPk(id);
     if (!product) {
-      return res.redirect('/dashboard?error=' + encodeURIComponent('Repuesto no encontrado.'));
+      req.flash('error', 'Repuesto no encontrado.');
+      return res.redirect('/dashboard');
     }
 
-    product.name = name;
-    product.category = category;
-    product.brand = brand;
-    product.compatibility = compatibility;
-    product.durabilityKm = isNaN(parsedDurability) ? product.durabilityKm : parsedDurability;
-    product.stock = parsedStock;
-    product.price = parsedPrice;
-    product.technicalSpecs = {
-      torque_nm: torque_nm || 'N/A',
-      dimensions: dimensions || 'N/A',
-      weight_kg: weight_kg || 'N/A'
-    };
+    // Excluir SKU del update (no debe modificarse tras la creación)
+    const { sku, ...updateData } = validation.data;
+    await product.update(updateData);
 
-    await product.save();
-    res.redirect('/dashboard?success=' + encodeURIComponent('Repuesto actualizado correctamente.'));
+    req.flash('success', 'Repuesto actualizado correctamente.');
+    res.redirect('/dashboard');
   } catch (error) {
     console.error('Error al actualizar repuesto:', error);
     let errorMessage = 'Error al actualizar el repuesto.';
     if (error.name === 'SequelizeValidationError') {
       errorMessage = error.errors.map(e => e.message).join('. ');
     }
-    res.redirect('/dashboard?error=' + encodeURIComponent(errorMessage));
+    req.flash('error', errorMessage);
+    res.redirect('/dashboard');
   }
 };
 
 /**
  * Elimina un repuesto del inventario.
+ * FLASH: usa req.flash() en lugar de ?error= en la URL.
  */
 exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
@@ -219,19 +273,21 @@ exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByPk(id);
     if (!product) {
-      return res.redirect('/dashboard?error=' + encodeURIComponent('Repuesto no encontrado.'));
+      req.flash('error', 'Repuesto no encontrado.');
+      return res.redirect('/dashboard');
     }
 
-    const productName = product.name; // Capturar nombre antes de eliminar
+    const productName = product.name;
     await product.destroy();
 
-    // F4: Notificar a todos los clientes del dashboard via Socket.IO
     const io = req.app.get('io');
     if (io) io.emit('product_update', { type: 'deleted', productName });
 
-    res.redirect('/dashboard?success=' + encodeURIComponent('Repuesto eliminado del catálogo con éxito.'));
+    req.flash('success', 'Repuesto eliminado del catálogo con éxito.');
+    res.redirect('/dashboard');
   } catch (error) {
     console.error('Error al eliminar repuesto:', error);
-    res.redirect('/dashboard?error=' + encodeURIComponent('Error al eliminar el repuesto del catálogo.'));
+    req.flash('error', 'Error al eliminar el repuesto del catálogo.');
+    res.redirect('/dashboard');
   }
 };
