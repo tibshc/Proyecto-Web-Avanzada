@@ -87,6 +87,16 @@ io.on('connection', (socket) => {
 
     // Retransmitir el mensaje a todos los clientes en la sala
     io.to('support-room').emit('message', sanitizedMessage);
+
+    // 🔔 NOTIFICACIÓN GLOBAL: Emitir a todos los usuarios conectados (fuera del chat)
+    // El cliente filtrará si está en la página /chat para no duplicar notificaciones
+    io.emit('chat_notification', {
+      sender: sanitizedMessage.sender,
+      role:   sanitizedMessage.role,
+      preview: sanitizedMessage.text.length > 60
+        ? sanitizedMessage.text.substring(0, 60) + '…'
+        : sanitizedMessage.text
+    });
   });
 
   // F5: Indicador "está escribiendo..." — retransmitir a la sala excluyendo el emisor
