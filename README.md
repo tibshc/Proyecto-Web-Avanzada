@@ -1,132 +1,79 @@
-# Sistema de Gestión de Repuestos para Vehículos Comerciales Pesados
+# Sistema de Gestión de Repuestos - Arquitectura de Microservicios
 
-Este es el esqueleto base para una aplicación web monolítica basada en el patrón de arquitectura **Modelo-Vista-Controlador (MVC)**, diseñada para gestionar el catálogo de inventario de piezas (chasis, motores, frenos) de camiones y buses de carga pesada, integrando un chat en tiempo real para consultas de compatibilidad técnica.
-
----
-
-## 🛠️ Stack Tecnológico
-
-- **Core**: Node.js con Express.js
-- **Motor de Plantillas (Servidor)**: EJS (HTML dinámico)
-- **Base de Datos**: PostgreSQL mediante Sequelize ORM
-- **Tiempo Real**: Socket.IO montado sobre el mismo servidor HTTP
-- **Seguridad**: `bcryptjs` (encriptación de contraseñas) y `express-session` con persistencia en base de datos (`connect-session-sequelize`)
+Este proyecto es una evolución de una arquitectura monolítica hacia una **Arquitectura de Microservicios** basada en contenedores (Docker), React y Node.js. Permite gestionar el catálogo de inventario de piezas de camiones y buses de carga pesada, integrando un chat en tiempo real para consultas de compatibilidad técnica.
 
 ---
 
-## 📁 Estructura del Proyecto
+## 🛠️ Stack Tecnológico Actual
 
-```text
-Proyecto-Web-Avanzada/
-├── config/
-│   └── database.js          # Conexión e inicialización de Sequelize
-├── controllers/
-│   ├── authController.js    # Lógica de login, registro y recuperación
-│   ├── productController.js # Lógica CRUD para el catálogo de repuestos
-│   └── chatController.js    # Renderización del chat de soporte técnico
-├── middlewares/
-│   └── authMiddleware.js    # Control de accesos y roles (RBAC)
-├── models/
-│   ├── index.js             # Conector de base de datos y modelos
-│   ├── User.js              # Modelo Sequelize para Usuarios (Mecánicos, Soporte, Admin)
-│   └── Product.js           # Modelo Sequelize para Repuestos de Carga Pesada
-├── public/
-│   ├── css/
-│   │   └── styles.css       # Estilos globales premium (Dark theme + Glassmorphism)
-│   └── js/
-│       └── chat-client.js   # Script cliente de Socket.IO con XSS y autoscroll
-├── routes/
-│   ├── authRoutes.js        # Endpoints de autenticación
-│   ├── dashboardRoutes.js   # Endpoints del CRUD con restricción de roles
-│   └── chatRoutes.js        # Endpoint del chat de soporte
-├── views/
-│   ├── partials/
-│   │   ├── header.ejs       # Encabezado (Navbar, CSS y Lucide Icons)
-│   │   └── footer.ejs       # Pie de página (scripts globales)
-│   ├── login.ejs            # Vista de ingreso
-│   ├── register.ejs         # Vista de registro de cuenta
-│   ├── reset-password.ejs   # Vista de recuperación de contraseña
-│   ├── dashboard.ejs        # Panel del catálogo (CRUD interactivo)
-│   └── chat.ejs             # Sala de chat en tiempo real
-├── .env.example             # Plantilla de variables de entorno
-├── app.js                   # Configuración de Express y middlewares
-└── server.js                # Punto de entrada (Servidor HTTP + Socket.IO + DB)
-```
+- **Frontend**: React.js (Vite), React Router, Axios, Socket.IO Client.
+- **API Gateway**: Node.js, Express, Proxy Inverso (http-proxy-middleware).
+- **Microservicios Backend** (Node.js/Express):
+  - `auth-service`: Manejo de autenticación (JWT) y roles.
+  - `inventory-service`: CRUD del catálogo de repuestos.
+  - `chat-service`: Sockets en tiempo real.
+- **Bases de Datos**: PostgreSQL independiente por microservicio (Database per microservice).
+- **Infraestructura**: Docker y Docker Compose para orquestación de contenedores.
+- **Monitoreo**: Prometheus (Métricas HTTP) y Grafana (Dashboards visuales).
 
 ---
 
-## 🚀 Guía de Configuración para Desarrolladores
+## 🚀 Guía de Configuración y Ejecución
 
-Sigue estos pasos para levantar la aplicación en tu entorno local:
+Todo el ecosistema está orquestado mediante Docker, por lo que **solo necesitas tener Docker y Docker Compose instalados** en tu máquina. No es necesario instalar Node.js ni PostgreSQL localmente.
 
-### 1. Clonar el repositorio e Instalar Dependencias
+### 1. Levantar el Ecosistema
+
+En la raíz del proyecto, ejecuta el siguiente comando para construir todas las imágenes y levantar todos los contenedores en segundo plano:
+
 ```bash
-git clone <url-del-repositorio>
-cd Proyecto-Web-Avanzada
-npm install
+docker-compose up -d --build
 ```
 
-### 2. Configurar la Base de Datos con Docker 🐳
+Este comando levantará:
+- **Bases de Datos**: `auth_postgres` (5433) e `inventory_postgres` (5434).
+- **Backend**: `auth-service` (4000), `inventory-service` (5000), `chat-service` (6000).
+- **API Gateway**: (3000) - Punto de entrada único para el frontend.
+- **Frontend (React)**: Servido en el puerto **3001** (Accesible en `http://localhost:3001`).
+- **Observabilidad**: `prometheus` (9090) y `grafana` (3002).
 
-Hemos incluido un archivo `docker-compose.yml` para facilitar el levantamiento de la base de datos PostgreSQL en un contenedor aislado, evitando instalaciones locales de software adicionales:
+### 2. Acceso a la Aplicación
 
-1. Asegúrate de tener **Docker** y **Docker Compose** instalados y ejecutándose.
-2. Levanta el contenedor de PostgreSQL en segundo plano ejecutando:
-   ```bash
-   docker compose up -d
-   ```
-   *Esto iniciará un contenedor llamado `repuestos_postgres` en el puerto `5432` con el usuario, contraseña y base de datos ya configurados.*
-3. Copia el archivo `.env.example` y nómbralo `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-4. Los valores por defecto de `.env` ya coinciden con la configuración de Docker, por lo que **no necesitas modificar nada** si utilizas la base de datos dockerizada.
+Una vez que todos los contenedores estén levantados (`docker-compose ps` para verificar), abre tu navegador e ingresa a:
 
-### 2.5 Poblar la Base de Datos (Opcional - Seed)
-Para rellenar la base de datos con usuarios de prueba (Administrador, Soporte, Mecánico) y un catálogo inicial de repuestos pesados, ejecuta el script de sembrado:
-```bash
-npm run seed
-```
-*Credenciales de prueba generadas:*
-- **Administrador**: `admin@repuestos.com` (Contraseña: `password123`)
-- **Soporte Técnico**: `soporte@repuestos.com` (Contraseña: `password123`)
-- **Mecánico**: `mecanico@repuestos.com` (Contraseña: `password123`)
-
-### 3. Ejecutar en Modo de Desarrollo
-Arranca el servidor en modo desarrollo utilizando `nodemon` para que se reinicie automáticamente con cada cambio en el código:
-```bash
-npm run dev
-```
-
-El servidor sincronizará de forma automática las tablas (`Users`, `Products` y `Sessions`) en la base de datos de PostgreSQL dockerizada y se levantará en: **`http://localhost:3000`**
+👉 **[http://localhost:3001](http://localhost:3001)**
 
 ---
 
-## 🛡️ Roles y Seguridad Incorporados
+## 👥 Usuarios de Prueba (Roles)
 
-La aplicación cuenta con control de accesos basados en roles (**RBAC**):
-- **Mecánico (`mechanic`)**: Puede visualizar el catálogo de repuestos, precios y detalles técnicos. No puede registrar, editar ni eliminar piezas. Tiene acceso al chat en tiempo real para resolver dudas de compatibilidad.
-- **Soporte Técnico (`support`)**: Puede ver el catálogo, chatear y tiene permisos para **crear** y **editar** repuestos en el inventario.
-- **Administrador (`admin`)**: Tiene control total sobre el sistema, incluyendo la eliminación permanente de repuestos (`deleteProduct`).
+El sistema cuenta con Control de Accesos Basado en Roles (RBAC). Puedes utilizar los siguientes usuarios de prueba que ya han sido generados en la base de datos para probar los distintos niveles de permisos:
+
+| Rol | Correo Electrónico | Contraseña | Permisos |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin@taller.com` | `password123` | Control total. Puede agregar, editar y **eliminar** repuestos. |
+| **Soporte** | `soporte@taller.com` | `password123` | Puede ver, agregar y editar repuestos. No puede eliminar. |
+| **Mecánico** | `mecanico@taller.com` | `password123` | Solo lectura. No puede agregar, editar ni eliminar repuestos. |
+
+Todos los usuarios tienen acceso a la sala de **Soporte Técnico en Línea** (Chat), donde sus mensajes aparecerán con su respectiva etiqueta de rol.
 
 ---
 
-## 📝 Guía para Continuar el Desarrollo
+## 📊 Monitoreo y Observabilidad
 
-Si deseas agregar nuevas características a este proyecto, sigue el flujo recomendado del patrón MVC:
+Para revisar el estado de salud de la aplicación y las métricas de peticiones HTTP (latencias, códigos de estado, etc):
 
-1. **Base de Datos (Modelos)**:
-   - Si necesitas añadir nuevos campos o tablas, agrégalos en `models/`.
-   - Sequelize creará la estructura al arrancar gracias a `sequelize.sync({ alter: true })` en `server.js` (útil durante el desarrollo ágil).
+1. **Prometheus**: Ingresa a `http://localhost:9090` para consultar métricas en bruto (Ej: `http_request_duration_seconds_count`).
+2. **Grafana**: Ingresa a `http://localhost:3005` (Usuario: `admin`, Clave: `password123`). Puedes importar dashboards para visualizar gráficamente el tráfico que pasa por el API Gateway y los microservicios.
 
-2. **Controladores**:
-   - Agrega lógica de negocio en `controllers/`.
-   - Si creas nuevas consultas a la base de datos, maneja bloques `try-catch` y pasa los errores de validación a la vista para mantener una experiencia de usuario limpia.
+---
 
-3. **Vistas (EJS)**:
-   - Utiliza las clases CSS predefinidas en `public/css/styles.css` para mantener la estética oscura y elegante (Glassmorphism).
-   - Recuerda incluir los partials `<%- include('partials/header') %>` y `<%- include('partials/footer') %>` para heredar el navbar común, las sesiones y la biblioteca de iconos.
+## 🛑 Detener la Aplicación
 
-4. **Rutas**:
-   - Mapea los nuevos controladores en `routes/`.
-   - No olvides proteger tus endpoints utilizando el middleware `isAuthenticated` y, si es restrictivo, `authorizeRoles(['admin', 'support'])`.
+Para apagar el entorno y detener todos los contenedores, ejecuta:
+
+```bash
+docker-compose down
+```
+
+*(Si deseas borrar también los volúmenes de las bases de datos para empezar desde cero, puedes agregar la bandera `-v`: `docker-compose down -v`).*

@@ -1,19 +1,163 @@
 version: '3.8'
 
 services:
-  postgres_db:
+  # ==========================================
+  # BASES DE DATOS (Database per Microservice)
+  # ==========================================
+  auth_postgres:
     image: postgres:15-alpine
-    container_name: repuestos_postgres
+    container_name: auth_postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: repuestos_db
+      POSTGRES_DB: auth_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - auth_pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
 
+  inventory_postgres:
+    image: postgres:15-alpine
+    container_name: inventory_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - inventory_pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # ==========================================
+  # MICROSERVICIOS BACKEND
+  # ==========================================
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DB_HOST=auth_postgres # Usa el nombre del contenedor de la DB
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=auth_db
+      - JWT_SECRET=supersecret_jwt_key_for_auth_service
+    depends_on:
+      - auth_postgres
+    networks:
+      - app-network
+
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DB_HOST=inventory_postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=inventory_db
+    depends_on:
+      - inventory_postgres
+    networks:
+      - app-network
+
+  chat-service:
+    build: ./chat-service
+    container_name: chat-service
+    restart: always
+    ports:
+      - "6000:6000"
+    environment:
+      - PORT=6000
+    networks:
+      - app-network
+
+  # ==========================================
+  # API GATEWAY
+  # ==========================================
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:4000
+      - INVENTORY_SERVICE_URL=http://inventory-service:5000
+      - CHAT_SERVICE_URL=http://chat-service:6000
+      - JWT_SECRET=supersecret_jwt_key_for_auth_service
+    depends_on:
+      - auth-service
+      - inventory-service
+      - chat-service
+    networks:
+      - app-network
+
+  # ==========================================
+  # FRONTEND (React SPA)
+  # ==========================================
+  frontend:
+    build: ./client
+    container_name: frontend
+    restart: always
+    ports:
+      - "3001:80" # El host usa 3001, nginx internamente usa 80
+    depends_on:
+      - api-gateway
+    networks:
+      - app-network
+
+  # ==========================================
+  # OBSERVABILIDAD
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3005:3000" # Mapeado al 3005 local para no interferir
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
+
+# ==========================================
+# VOLÚMENES Y REDES
+# ==========================================
 volumes:
-  pgdata:
+  auth_pgdata:
     driver: local
+  inventory_pgdata:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
