@@ -12,6 +12,15 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
+app.get('/health/live', (req, res) => res.json({ status: 'ok', service: 'inventory-service' }));
+app.get('/health/ready', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({ status: 'ready', service: 'inventory-service' });
+  } catch {
+    res.status(503).json({ status: 'not-ready', service: 'inventory-service' });
+  }
+});
 
 // Configuración de Prometheus (Métricas)
 const promBundle = require('express-prom-bundle');

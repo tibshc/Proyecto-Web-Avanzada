@@ -1,4 +1,5 @@
 const Part = require('../models/Part');
+const { sequelize } = require('../config/db');
 
 const getAllParts = async (req, res) => {
   try {
@@ -63,10 +64,51 @@ const deletePart = async (req, res) => {
   }
 };
 
+const reserveStock = async (req, res) => {
+  const quantity = Number(req.body.quantity);
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return res.status(400).json({ message: 'Quantity must be a positive integer' });
+  }
+
+  const transaction = await sequelize.transaction();
+  try {
+    const part = await Part.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!part) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Part not found' });
+    }
+    if (part.stock < quantity) {
+      await transaction.rollback();
+      return res.status(409).json({ message: 'Insufficient stock' });
+    }
+    part.stock -= quantity;
+    await part.save({ transaction });
+    await transaction.commit();
+    res.json({ partId: part.id, quantity, remainingStock: part.stock });
+  } catch (error) {
+    await transaction.rollback();
+    res.status(500).json({ message: 'Unable to reserve stock' });
+  }
+};
+
+const releaseStock = async (req, res) => {
+  const quantity = Number(req.body.quantity);
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return res.status(400).json({ message: 'Quantity must be a positive integer' });
+  }
+  const part = await Part.findByPk(req.params.id);
+  if (!part) return res.status(404).json({ message: 'Part not found' });
+  part.stock += quantity;
+  await part.save();
+  res.json({ partId: part.id, quantity, stock: part.stock });
+};
+
 module.exports = {
   getAllParts,
   getPartById,
   createPart,
   updatePart,
-  deletePart
+  deletePart,
+  reserveStock,
+  releaseStock
 };

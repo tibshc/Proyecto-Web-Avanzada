@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Bell, LogOut, MessageSquare, LayoutDashboard, X } from 'lucide-react';
+import { Bell, LogOut, MessageSquare, LayoutDashboard, ShoppingCart, X } from 'lucide-react';
 import { connectSocket } from '../services/socket';
 
 const Navbar = () => {
@@ -57,6 +57,7 @@ const Navbar = () => {
               <MessageSquare size={16} style={{marginRight: '5px'}}/>Soporte Chat
               {unread > 0 && <span className="notification-badge">{unread > 9 ? '9+' : unread}</span>}
             </Link>
+            <Link to="/cart" className="nav-link"><ShoppingCart size={16} style={{marginRight: '5px'}}/>Carrito</Link>
             <button className="btn btn-secondary" onClick={handleLogout}>
               <LogOut size={16} style={{marginRight: '5px'}}/> Salir
             </button>

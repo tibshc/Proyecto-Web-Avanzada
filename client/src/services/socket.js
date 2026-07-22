@@ -6,6 +6,7 @@ export const connectSocket = () => {
 
   const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
     path: '/api/chat/socket.io',
+    auth: { token },
     query: { token }
   });
 

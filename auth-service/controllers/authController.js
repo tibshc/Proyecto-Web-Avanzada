@@ -4,7 +4,10 @@ const User = require('../models/User');
 
 const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
+    if (!name || !email || !password || password.length < 6) {
+      return res.status(400).json({ message: 'Name, valid email and password of at least 6 characters are required' });
+    }
 
     // Verificar si el usuario existe
     let user = await User.findOne({ where: { email } });
@@ -21,7 +24,7 @@ const register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role || 'user'
+      role: 'mechanic'
     });
 
     res.status(201).json({ message: 'User registered successfully' });
@@ -29,6 +32,12 @@ const register = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: 'Server error during registration' });
   }
+};
+
+const me = async (req, res) => {
+  const user = await User.findByPk(req.user.id, { attributes: ['id', 'name', 'email', 'role'] });
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  res.json({ user });
 };
 
 const login = async (req, res) => {
@@ -51,6 +60,8 @@ const login = async (req, res) => {
     const payload = {
       user: {
         id: user.id,
+        name: user.name,
+        email: user.email,
         role: user.role
       }
     };
@@ -72,5 +83,6 @@ const login = async (req, res) => {
 
 module.exports = {
   register,
-  login
+  login,
+  me
 };

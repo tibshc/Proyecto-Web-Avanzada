@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
+import Cart from './pages/Cart';
 import './index.css';
 
 const PrivateRoute = ({ children }) => {
@@ -38,6 +39,14 @@ function App() {
                   <Chat />
                 </PrivateRoute>
               } 
+            />
+            <Route
+              path="/cart"
+              element={
+                <PrivateRoute>
+                  <Cart />
+                </PrivateRoute>
+              }
             />
           </Routes>
         </div>
