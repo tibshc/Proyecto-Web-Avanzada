@@ -51,6 +51,18 @@
       </div>
     </div>
 
+    <!-- F5: Indicador "está escribiendo..." con animación de puntos -->
+    <div id="typing-indicator" class="hidden px-5 py-2.5 bg-spotify-black/50 border-t border-spotify-highlight/20">
+      <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-0.5">
+          <span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style="animation-delay:0ms; animation-duration:0.8s"></span>
+          <span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style="animation-delay:160ms; animation-duration:0.8s"></span>
+          <span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style="animation-delay:320ms; animation-duration:0.8s"></span>
+        </div>
+        <span id="typing-text" class="text-[11px] text-gray-500 font-medium italic"></span>
+      </div>
+    </div>
+
     <!-- Pie del Chat / Formulario de Envío -->
     <div class="bg-spotify-dark border-t border-spotify-highlight/40 px-5 py-4">
       <form id="chat-form" class="flex gap-3">
@@ -78,14 +90,14 @@
   </div>
 </div>
 
-<!-- Cargar el módulo cliente de Socket.IO (servido por el backend) -->
-<script src="/socket.io/socket.io.js"></script>
+<%# Socket.IO ya cargado en header.ejs — no duplicar %>
 
 <!-- Lógica del Cliente de Socket.IO conectada al evento 'chat_message' -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     // Conectar a Socket.IO
     const socket = io();
+    socket.emit('join_chat_room'); // F5: Unirse a la sala de soporte técnico
 
     // Elementos del DOM
     const chatMessages = document.getElementById('chat-messages');
@@ -99,33 +111,6 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     };
     scrollToBottom();
-
-    // Enviar mensaje
-    chatForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      const text = messageInput.value.trim();
-      if (!text) return;
-
-      const messageData = {
-        sender: userName,
-        role: userRole,
-        text: text,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      // Emitir mensaje al servidor usando el evento 'chat_message'
-      socket.emit('chat_message', messageData);
-
-      messageInput.value = '';
-      messageInput.focus();
-    });
-
-    // Escuchar mensajes transmitidos desde el servidor
-    socket.on('message', (message) => {
-      displayMessage(message);
-      scrollToBottom();
-    });
 
     // Pintar mensaje en pantalla
     const displayMessage = (message) => {
@@ -181,5 +166,82 @@
 
       chatMessages.appendChild(wrapper);
     };
+
+    // 📝 CORRECCIÓN DEL BUG: Escuchar el historial de chat cuando se conecta
+    // Esto carga todos los mensajes previos de la BD
+    socket.on('chat_history', (history) => {
+      console.log(`📜 Cargando ${history.length} mensajes del historial...`);
+      history.forEach(message => {
+        displayMessage(message);
+      });
+      scrollToBottom();
+    });
+
+    // F5: Detección de escritura con debounce de 1.5 segundos
+    let typingTimeout;
+    let isTyping = false;
+
+    messageInput.addEventListener('input', () => {
+      if (!isTyping) {
+        isTyping = true;
+        socket.emit('typing', { sender: userName, role: userRole });
+      }
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        isTyping = false;
+        socket.emit('stop_typing');
+      }, 1500);
+    });
+
+    // Enviar mensaje
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      // Resetear el estado de escritura al enviar
+      clearTimeout(typingTimeout);
+      isTyping = false;
+      socket.emit('stop_typing');
+
+      const messageData = {
+        sender: userName,
+        role: userRole,
+        text: text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      // Emitir mensaje al servidor usando el evento 'chat_message'
+      socket.emit('chat_message', messageData);
+
+      messageInput.value = '';
+      messageInput.focus();
+    });
+
+    // Escuchar mensajes transmitidos desde el servidor (solo sala support-room)
+    socket.on('message', (message) => {
+      displayMessage(message);
+      scrollToBottom();
+    });
+
+    // F5: Mostrar/ocultar el indicador "está escribiendo..."
+    const typingIndicator = document.getElementById('typing-indicator');
+    const typingText = document.getElementById('typing-text');
+    let stopTypingTimer;
+
+    socket.on('user_typing', ({ sender, role }) => {
+      const roleLabel = role === 'support' ? 'Soporte' : (role === 'admin' ? 'Admin' : 'Mecánico');
+      typingText.textContent = `${sender} (${roleLabel}) está escribiendo...`;
+      typingIndicator.classList.remove('hidden');
+      clearTimeout(stopTypingTimer);
+      // Seguro de caída: ocultar si no llega stop_typing
+      stopTypingTimer = setTimeout(() => typingIndicator.classList.add('hidden'), 3000);
+    });
+
+    socket.on('user_stop_typing', () => {
+      clearTimeout(stopTypingTimer);
+      typingIndicator.classList.add('hidden');
+    });
   });
 </script>

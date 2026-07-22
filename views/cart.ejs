@@ -76,7 +76,7 @@
                       min="1" 
                       max="<%= item.product.stock %>"
                       required
-                      onchange="this.form.submit()"
+                      onchange="if(this.value >= 1 && this.value <= <%= item.product.stock %>) this.form.submit();"
                       class="w-12 bg-transparent text-center text-white text-xs font-bold outline-none focus:ring-0 border-0"
                     >
                     <span class="text-[10px] text-gray-500 font-semibold pr-1">uds</span>
@@ -116,7 +116,11 @@
         <% } else { %>
           <div class="space-y-4">
             <% history.forEach((order, idx) => { %>
-              <div class="bg-spotify-black border border-spotify-highlight/40 rounded-xl overflow-hidden shadow">
+              <div class="bg-spotify-black border border-spotify-highlight/40 rounded-xl overflow-hidden shadow"
+                data-order-num="<%= history.length - idx %>"
+                data-order-date="<%= new Date(order.updatedAt).toLocaleString('es-ES') %>"
+                data-order-total="<%= parseFloat(order.total).toFixed(2) %>"
+                data-items="<%= encodeURIComponent(JSON.stringify(order.items.map(function(i){ return { name: i.product ? i.product.name : 'Repuesto Descatalogado', sku: i.product ? i.product.sku : 'N/A', qty: i.quantity, price: parseFloat(i.price).toFixed(2), subtotal: (parseFloat(i.price) * i.quantity).toFixed(2) }; }))) %>">
                 <!-- Encabezado del Acordeón -->
                 <button 
                   type="button"
@@ -155,6 +159,21 @@
                       </div>
                     <% }) %>
                   </ul>
+
+                  <!-- F6: Botón Imprimir Pedido -->
+                  <div class="mt-4 pt-3 border-t border-spotify-highlight/20 flex justify-end">
+                    <button
+                      type="button"
+                      onclick="printOrderDetail(this)"
+                      class="inline-flex items-center gap-2 px-4 py-2 bg-spotify-highlight hover:bg-spotify-card border border-spotify-highlight hover:border-gray-400 text-gray-300 hover:text-white text-xs font-bold rounded-lg transition-all group">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:text-spotify-orange transition-colors">
+                        <polyline points="6 9 6 2 18 2 18 9"/>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                        <rect x="6" y="14" width="12" height="8"/>
+                      </svg>
+                      Imprimir Pedido
+                    </button>
+                  </div>
                 </div>
               </div>
             <% }) %>
@@ -233,6 +252,100 @@
     } else {
       detailPanel.classList.add('hidden');
       chevronIcon.classList.remove('rotate-180');
+    }
+  }
+
+  // F6: Imprimir / Exportar un pedido histórico como factura HTML
+  function printOrderDetail(btn) {
+    const container = btn.closest('[data-order-num]');
+    if (!container) return;
+
+    const orderNum  = container.dataset.orderNum;
+    const orderDate = container.dataset.orderDate;
+    const orderTotal = container.dataset.orderTotal;
+    const items = JSON.parse(decodeURIComponent(container.dataset.items));
+
+    const rowsHTML = items.map(item => `
+      <tr>
+        <td>${item.name}</td>
+        <td style="font-family:monospace;color:#f97316;">${item.sku}</td>
+        <td style="text-align:center;">${item.qty}</td>
+        <td style="text-align:right;">$${item.price}</td>
+        <td style="text-align:right;font-weight:700;">$${item.subtotal}</td>
+      </tr>`).join('');
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>Pedido #${orderNum} — Repuestos Pesados</title>
+        <style>
+          * { margin:0; padding:0; box-sizing:border-box; }
+          body { font-family:'Segoe UI',Arial,sans-serif; color:#1a1a1a; padding:40px; background:#fff; }
+          .header { border-bottom:3px solid #f97316; padding-bottom:20px; margin-bottom:24px;
+                    display:flex; justify-content:space-between; align-items:flex-end; }
+          .brand { font-size:22px; font-weight:800; color:#f97316; }
+          .brand span { color:#1a1a1a; }
+          .order-meta { text-align:right; }
+          .order-meta h1 { font-size:18px; font-weight:700; }
+          .order-meta p  { font-size:12px; color:#6b7280; margin-top:4px; }
+          table { width:100%; border-collapse:collapse; margin-top:16px; }
+          th { background:#f9fafb; border:1px solid #e5e7eb; padding:10px 14px;
+               font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+               color:#6b7280; text-align:left; }
+          td { border:1px solid #e5e7eb; padding:10px 14px; font-size:13px; }
+          tfoot td { font-weight:800; font-size:15px;
+                     background:#fff7ed; border-color:#fed7aa; }
+          tfoot td:first-child { color:#ea580c; }
+          .footer-note { margin-top:32px; font-size:11px; color:#9ca3af;
+                         text-align:center; border-top:1px solid #e5e7eb; padding-top:16px; }
+          @media print { @page { margin:20mm; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="brand">Repuestos<span>Pesados</span></div>
+            <p style="font-size:12px;color:#6b7280;margin-top:4px;">Sistema de Gestión de Inventario — Flota Pesada</p>
+          </div>
+          <div class="order-meta">
+            <h1>Pedido #${orderNum}</h1>
+            <p>Fecha: ${orderDate}</p>
+            <p style="font-weight:700;color:#059669;margin-top:2px;">Estado: Completado ✓</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Repuesto / Pieza</th>
+              <th>SKU</th>
+              <th style="text-align:center;">Cantidad</th>
+              <th style="text-align:right;">Precio Unit.</th>
+              <th style="text-align:right;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHTML}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4">Total del Pedido</td>
+              <td style="text-align:right;">$${orderTotal}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <p class="footer-note">
+          Documento generado por el Sistema de Repuestos para Vehículos Comerciales Pesados &middot;
+          ${new Date().toLocaleString('es-ES')}
+        </p>
+      </body>
+      </html>`;
+
+    const printWin = window.open('', '_blank', 'width=920,height=700');
+    if (printWin) {
+      printWin.document.write(printContent);
+      printWin.document.close();
+      printWin.focus();
+      setTimeout(() => printWin.print(), 500);
     }
   }
 </script>

@@ -31,6 +31,7 @@ const testConnection = async () => {
     console.log('✅ Conexión establecida con éxito a la base de datos PostgreSQL.');
   } catch (error) {
     console.error('❌ No se pudo conectar a la base de datos:', error.message);
+    throw error; // BUG 1 FIX: re-lanzar para que server.js pueda hacer process.exit(1)
   }
 };
 

@@ -28,11 +28,10 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      notEmpty: { msg: 'La contraseña es obligatoria' },
-      len: {
-        args: [6, 100],
-        msg: 'La contraseña debe tener al menos 6 caracteres'
-      }
+      notEmpty: { msg: 'La contraseña es obligatoria' }
+      // BUG 6 FIX: len eliminado aquí porque bcrypt la hashea antes de que
+      // Sequelize corra las validaciones del modelo en save().
+      // La longitud mínima se valida en el hook beforeValidate (ver abajo).
     }
   },
   role: {
@@ -42,6 +41,15 @@ const User = sequelize.define('User', {
   }
 }, {
   hooks: {
+    // BUG 6 FIX: Validar longitud mínima ANTES de hashear (beforeValidate corre
+    // sobre el valor original en texto plano, no sobre el hash bcrypt).
+    beforeValidate: (user) => {
+      if (user.changed('password') && user.password) {
+        if (user.password.length < 6) {
+          throw new Error('La contraseña debe tener al menos 6 caracteres');
+        }
+      }
+    },
     // Hook para encriptar la contraseña antes de guardar el registro en la base de datos
     beforeSave: async (user) => {
       if (user.changed('password')) {
