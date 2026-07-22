@@ -1,4 +1,4 @@
-# Sistema de Gestión de Repuestos - Arquitectura de Microservicios
+# Repuestos Pesados - Sistema de Gestión de Repuestos para Vehículos Comerciales Pesados
 
 Este proyecto es una evolución de una arquitectura monolítica hacia una **Arquitectura de Microservicios** basada en contenedores (Docker), React y Node.js. Permite gestionar el catálogo de inventario de piezas de camiones y buses de carga pesada, integrando un chat en tiempo real para consultas de compatibilidad técnica.
 

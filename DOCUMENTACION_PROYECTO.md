@@ -1,4 +1,4 @@
-# Documentación del Proyecto: Arquitectura de Microservicios
+# Repuestos Pesados - Documentación del Proyecto: Arquitectura de Microservicios
 
 Este documento detalla la refactorización de la aplicación monolítica hacia una arquitectura de microservicios, con un enfoque inicial en la autenticación y el enrutamiento centralizado.
 

@@ -88,4 +88,4 @@ jobs:
           tags: frontend:latest
 
       - name: Validate with Docker Compose
-        run: docker-compose config
+        run: docker compose config

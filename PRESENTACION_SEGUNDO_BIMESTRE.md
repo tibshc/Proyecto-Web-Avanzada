@@ -1,4 +1,4 @@
-# 🚛 Sistema de Gestión de Repuestos para Vehículos Comerciales Pesados
+# 🚛 Repuestos Pesados - Sistema de Gestión de Repuestos para Vehículos Comerciales Pesados
 
 ## Presentación — Segundo Bimestre
 ### Arquitectura de Microservicios

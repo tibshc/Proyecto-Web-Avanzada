@@ -1,7 +1,7 @@
 {
   "name": "sistema-gestion-repuestos",
   "version": "1.0.0",
-  "description": "Sistema de Gestión de Repuestos para Vehículos Comerciales Pesados (MVC + Socket.io)",
+  "description": "Repuestos Pesados - Sistema de Gestión de Repuestos para Vehículos Comerciales Pesados (Microservicios + React)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

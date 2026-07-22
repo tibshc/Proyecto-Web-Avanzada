@@ -46,7 +46,7 @@ const Navbar = () => {
     <nav className="navbar">
       <Link to="/" className="navbar-brand">
         <span className="brand-icon">⚙️</span>
-        Micro<span>App</span>
+        Repuestos<span>Pesados</span>
       </Link>
       <div className="navbar-nav">
         {user ? (
