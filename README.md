@@ -9,9 +9,10 @@ Este proyecto es una evolución de una arquitectura monolítica hacia una **Arqu
 - **Frontend**: React.js (Vite), React Router, Axios, Socket.IO Client.
 - **API Gateway**: Node.js, Express, Proxy Inverso (http-proxy-middleware).
 - **Microservicios Backend** (Node.js/Express):
-  - `auth-service`: Manejo de autenticación (JWT) y roles.
+  - `auth-service`: Manejo de autenticación (JWT), roles y recuperación de contraseña.
   - `inventory-service`: CRUD del catálogo de repuestos.
   - `chat-service`: Sockets en tiempo real.
+  - `cart-service`: Gestión de carrito de compras.
 - **Bases de Datos**: PostgreSQL independiente por microservicio (Database per microservice).
 - **Infraestructura**: Docker y Docker Compose para orquestación de contenedores.
 - **Monitoreo**: Prometheus (Métricas HTTP) y Grafana (Dashboards visuales).
@@ -24,44 +25,52 @@ Todo el ecosistema está orquestado mediante Docker, por lo que **solo necesitas
 
 ```text
 Proyecto-Web-Avanzada/
-├── config/
-│   └── database.js          # Conexión e inicialización de Sequelize
-├── controllers/
-│   ├── authController.js    # Lógica de login, registro y recuperación de contraseña
-│   ├── cartController.js    # Lógica de gestión de compras y operaciones del carrito
-│   ├── chatController.js    # Renderización del chat de soporte técnico
-│   └── productController.js # Lógica CRUD y filtrado para el catálogo de repuestos
-├── middlewares/
-│   ├── authMiddleware.js    # Control de accesos, roles (RBAC) y propiedad de items
-│   └── flashMiddleware.js   # Middleware de mensajes dinámicos flash en sesión
-├── models/
-│   ├── index.js             # Inicializador de base de datos y mapeo asociativo
-│   ├── User.js              # Modelo Sequelize para Usuarios (Mecánicos, Soporte, Admin)
-│   ├── Product.js           # Modelo Sequelize para Repuestos de Carga Pesada
-│   ├── Cart.js              # Modelo Sequelize de Carrito (relación uno-a-uno)
-│   ├── CartItem.js          # Modelo Sequelize de Ítems del Carrito (cantidad y precios)
-│   └── Message.js           # Modelo Sequelize para persistencia del chat
-├── public/
-│   └── css/
-│       └── styles.css       # Estilos globales premium (Dark theme, Glassmorphism, animations)
-├── routes/
-│   ├── auth.js              # Rutas de autenticación (ingreso, salida, registro)
-│   ├── cart.js              # Rutas de adición y actualización del carrito
-│   ├── chatRoutes.js        # Ruta del módulo de chat en vivo
-│   └── product.js           # Rutas del CRUD del catálogo y panel de administración
-├── views/
-│   ├── partials/
-│   │   ├── header.ejs       # Encabezado (Navbar, socket.io-client, notificaciones globales y Lucide)
-│   │   └── footer.ejs       # Pie de página (cierre de etiquetas y scripts complementarios)
-│   ├── login.ejs            # Vista de ingreso de sesión
-│   ├── register.ejs         # Vista de registro de nuevos usuarios
-│   ├── reset-password.ejs   # Vista de recuperación y cambio de clave
-│   ├── dashboard.ejs        # Panel del catálogo (interfaz interactiva del CRUD)
-│   ├── cart.ejs             # Vista del carrito de compras interactivo
-│   └── chat.ejs             # Sala de mensajería interactiva en tiempo real
-├── .env.example             # Plantilla de configuración de variables de entorno
-├── app.js                   # Configuración global del servidor Express
-└── server.js                # Punto de entrada (Servidor HTTP + Socket.IO + DB)
+├── api-gateway/          # API Gateway (Express + Proxy inverso)
+│   ├── server.js
+│   ├── Dockerfile
+│   └── middlewares/
+├── auth-service/         # Microservicio de Autenticación
+│   ├── server.js
+│   ├── Dockerfile
+│   ├── controllers/
+│   ├── models/
+│   └── routes/
+├── inventory-service/    # Microservicio de Inventario
+│   ├── server.js
+│   ├── Dockerfile
+│   ├── controllers/
+│   ├── models/
+│   └── routes/
+├── chat-service/         # Microservicio de Chat en Tiempo Real
+│   ├── server.js
+│   ├── Dockerfile
+│   ├── controllers/
+│   └── models/
+├── cart-service/         # Microservicio de Carrito de Compras
+│   ├── server.js
+│   ├── Dockerfile
+│   ├── controllers/
+│   ├── models/
+│   └── routes/
+├── client/               # Frontend React (SPA)
+│   ├── Dockerfile
+│   ├── src/
+│   │   ├── pages/        # Login, Register, Dashboard, Chat, Cart, ForgotPassword, ResetPassword
+│   │   ├── components/   # Navbar
+│   │   ├── context/      # AuthContext
+│   │   └── services/     # api.js, socket.js
+│   └── public/
+├── config/               # Configuración del monolito legado
+├── controllers/          # Controladores del monolito legado
+├── middlewares/          # Middlewares del monolito legado
+├── models/               # Modelos del monolito legado
+├── routes/               # Rutas del monolito legado
+├── views/                # Vistas EJS del monolito legado
+├── prometheus/           # Configuración de Prometheus
+├── .github/workflows/    # CI/CD con GitHub Actions
+├── docker-compose.yml    # Orquestación de 12 contenedores
+├── README.md             # Documentación del proyecto
+└── DOCUMENTACION_PROYECTO.md
 ```
 
 ### 1. Levantar el Ecosistema
@@ -73,11 +82,11 @@ docker-compose up -d --build
 ```
 
 Este comando levantará:
-- **Bases de Datos**: `auth_postgres` (5433) e `inventory_postgres` (5434).
-- **Backend**: `auth-service` (4000), `inventory-service` (5000), `chat-service` (6000).
+- **Bases de Datos**: `auth_postgres` (5433), `inventory_postgres` (5434), `cart_postgres` (5435), `chat_postgres` (5436).
+- **Microservicios**: `auth-service` (4000), `inventory-service` (5000), `chat-service` (6000), `cart-service` (7000).
 - **API Gateway**: (3000) - Punto de entrada único para el frontend.
 - **Frontend (React)**: Servido en el puerto **3001** (Accesible en `http://localhost:3001`).
-- **Observabilidad**: `prometheus` (9090) y `grafana` (3002).
+- **Observabilidad**: `prometheus` (9090) y `grafana` (3005).
 
 ### 2. Acceso a la Aplicación
 
@@ -93,9 +102,9 @@ El sistema cuenta con Control de Accesos Basado en Roles (RBAC). Puedes utilizar
 
 | Rol | Correo Electrónico | Contraseña | Permisos |
 | :--- | :--- | :--- | :--- |
-| **Administrador** | `admin@taller.com` | `password123` | Control total. Puede agregar, editar y **eliminar** repuestos. |
-| **Soporte** | `soporte@taller.com` | `password123` | Puede ver, agregar y editar repuestos. No puede eliminar. |
-| **Mecánico** | `mecanico@taller.com` | `password123` | Solo lectura. No puede agregar, editar ni eliminar repuestos. |
+| **Administrador** | `admin@repuestos.com` | `password123` | Control total. Puede agregar, editar y **eliminar** repuestos. |
+| **Soporte** | `soporte@repuestos.com` | `password123` | Puede ver, agregar y editar repuestos. No puede eliminar. |
+| **Mecánico** | `mecanico@repuestos.com` | `password123` | Solo lectura. No puede agregar, editar ni eliminar repuestos. |
 
 Todos los usuarios tienen acceso a la sala de **Soporte Técnico en Línea** (Chat), donde sus mensajes aparecerán con su respectiva etiqueta de rol.
 
@@ -124,6 +133,18 @@ Durante la última fase de desarrollo, se implementaron mejoras críticas de est
 - **Alertas Premium (Toasts)**: Al recibir un mensaje nuevo, el sistema genera dinámicamente un banner flotante premium (Toast visual interactivo) con animaciones CSS fluidas de entrada y salida (`slide-in` / `slide-out`).
 - **Indicador Dinámico (Badge)**: Se añadió un círculo contador de mensajes no leídos interactivo y animado (`animate-bounce`) en la opción "Soporte en Vivo" de la barra de navegación superior.
 - **Persistencia Inteligente**: La cantidad de mensajes no leídos se almacena en el navegador mediante `sessionStorage` para no perder el contador entre cambios de página, y se limpia automáticamente cuando el usuario ingresa de forma activa al chat en `/chat`.
+
+### 4. 🔐 Restablecimiento Seguro de Contraseña (2 Pasos)
+- **Flujo con token**: Se implementó un sistema seguro de recuperación de contraseña en 2 pasos:
+  - **Paso 1 - `/forgot-password`**: El usuario ingresa su email y el sistema genera un **token único de 64 caracteres** con expiración de 1 hora.
+  - **Paso 2 - `/reset-password`**: El usuario ingresa el token + nueva contraseña para restablecerla.
+- **Seguridad mejorada**:
+  - Respuesta genérica para evitar enumeración de emails (Info Disclosure).
+  - Token criptográficamente aleatorio (`crypto.randomBytes`).
+  - Expiración automática del token tras 1 hora.
+  - El token se consume al usarse (no puede reutilizarse).
+- **Frontend React**: Nuevas páginas `ForgotPassword.jsx` y `ResetPassword.jsx` con validaciones.
+- **Backend**: Endpoints `POST /auth/forgot-password` y `POST /auth/reset-password` en el auth-service.
 
 ---
 
