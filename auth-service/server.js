@@ -42,7 +42,7 @@ const startServer = async () => {
   await connectDB();
   
   // Sincronizar modelos con la DB
-  await sequelize.sync(); // Usar { force: true } solo en desarrollo para reiniciar tablas
+  await sequelize.sync();
   console.log('✅ Auth Models synchronized with PostgreSQL DB');
 
   app.listen(PORT, () => {

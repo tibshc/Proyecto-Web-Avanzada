@@ -46,6 +46,9 @@ const Login = () => {
             <label className="form-label">Contraseña</label>
             <input type="password" name="password" className="form-control" value={formData.password} onChange={handleChange} placeholder="********" />
           </div>
+          <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+            <Link to="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--color-primary)' }}>¿Olvidaste tu contraseña?</Link>
+          </div>
           <button type="submit" className="btn btn-primary btn-block">Entrar</button>
         </form>
         <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>

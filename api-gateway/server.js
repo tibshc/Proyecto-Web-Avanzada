@@ -27,7 +27,7 @@ const proxyOptions = (target, message, pathRewrite) => ({
   onError: (err, req, res) => res.status(502).json({ message })
 });
 
-app.use('/auth', createProxyMiddleware(proxyOptions(services.auth, 'Auth Service unavailable.')));
+app.use('/auth', createProxyMiddleware(proxyOptions(services.auth, 'Auth Service unavailable.', { '^/auth': '/' })));
 app.use('/api/inventory', authMiddleware, createProxyMiddleware(proxyOptions(
   services.inventory,
   'Inventory Service unavailable.',

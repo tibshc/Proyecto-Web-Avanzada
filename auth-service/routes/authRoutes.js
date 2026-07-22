@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, me } = require('../controllers/authController');
+const { register, login, me, forgotPassword, resetPassword } = require('../controllers/authController');
 const jwt = require('jsonwebtoken');
 
 const authenticate = (req, res, next) => {
@@ -24,5 +24,15 @@ router.post('/register', register);
 // @access  Public
 router.post('/login', login);
 router.get('/me', authenticate, me);
+
+// @route   POST /auth/forgot-password
+// @desc    Request password reset token
+// @access  Public
+router.post('/forgot-password', forgotPassword);
+
+// @route   POST /auth/reset-password
+// @desc    Reset password using token
+// @access  Public
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

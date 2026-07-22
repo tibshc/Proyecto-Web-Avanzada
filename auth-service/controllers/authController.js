@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 
 const register = async (req, res) => {
@@ -81,8 +82,113 @@ const login = async (req, res) => {
   }
 };
 
+// ============================================================
+// RESETEO SEGURO DE CONTRASEÑA (2 PASOS)
+// ============================================================
+// Paso 1: Solicitar token (forgot-password)
+// Paso 2: Usar token para cambiar contraseña (reset-password)
+
+/**
+ * Paso 1 — Solicitar restablecimiento de contraseña
+ * 
+ * Genera un token único y lo guarda en la BD con expiración de 1 hora.
+ * En producción, este token se enviaría por email.
+ * Por seguridad, la respuesta es idéntica exista o no el email.
+ * 
+ * Ruta: POST /auth/forgot-password
+ * Body: { email: string }
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ message: 'El correo electrónico es obligatorio.' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+
+    if (user) {
+      // Generar token seguro aleatorio de 32 bytes → 64 caracteres hex
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      // Expira en 1 hora
+      const resetTokenExpiry = new Date(Date.now() + 3600000);
+
+      user.resetToken = resetToken;
+      user.resetTokenExpiry = resetTokenExpiry;
+      await user.save();
+
+      // ⚠️ En producción esto se enviaría por email.
+      // Para el proyecto, devolvemos el token en la respuesta
+      // para que se pueda probar el flujo completo.
+      console.log(`🔐 Token de restablecimiento para ${email}: ${resetToken}`);
+    }
+
+    // Respuesta genérica — no revela si el email existe o no
+    return res.json({
+      message: 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.',
+      // En desarrollo devolvemos el token para pruebas
+      ...(process.env.NODE_ENV !== 'production' && user ? { resetToken: user.resetToken } : {})
+    });
+  } catch (error) {
+    console.error('Error en forgotPassword:', error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+};
+
+/**
+ * Paso 2 — Restablecer contraseña usando token
+ * 
+ * Verifica que el token sea válido y no haya expirado,
+ * luego actualiza la contraseña y limpia el token.
+ * 
+ * Ruta: POST /auth/reset-password
+ * Body: { token: string, newPassword: string }
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Token de restablecimiento requerido.' });
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+    }
+
+    // Buscar usuario con token válido y no expirado
+    const user = await User.findOne({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: { [require('sequelize').Op.gt]: new Date() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'El token es inválido o ha expirado. Solicita uno nuevo.' });
+    }
+
+    // Hashear la nueva contraseña
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    await user.save();
+
+    res.json({ message: 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.' });
+  } catch (error) {
+    console.error('Error en resetPassword:', error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+};
+
 module.exports = {
   register,
   login,
-  me
+  me,
+  forgotPassword,
+  resetPassword
 };
