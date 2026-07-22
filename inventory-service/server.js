@@ -4,6 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const { sequelize, connectDB } = require('./config/db');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const seedParts = require('./config/seed');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,7 +31,8 @@ app.use('/', inventoryRoutes);
 const startServer = async () => {
   await connectDB();
   
-  await sequelize.sync(); 
+  await sequelize.sync();
+  await seedParts();
   console.log('✅ Inventory Models synchronized with PostgreSQL DB');
 
   app.listen(PORT, () => {

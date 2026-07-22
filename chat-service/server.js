@@ -36,6 +36,11 @@ io.on('connection', (socket) => {
     console.log(`Mensaje de soporte recibido de ${msgData.sender}: ${msgData.text}`);
     // Retransmitir a todos los clientes conectados a la sala general
     io.emit('message', msgData);
+    io.emit('chat_notification', {
+      sender: msgData.sender || 'Soporte',
+      role: msgData.role || 'mechanic',
+      preview: String(msgData.text || '').slice(0, 60)
+    });
   });
 
   socket.on('disconnect', () => {
