@@ -40,11 +40,34 @@ io.on('connection', (socket) => {
   socket.join('support-room');
   if (socket.user.role === 'support' || socket.user.role === 'admin') socket.join('admin-room');
 
-  socket.on('chat_message', async (payload) => {
+  socket.on('chat_history_request', async (payload) => {
+    const channel = payload?.channel === 'admin' && ['support', 'admin'].includes(socket.user.role) ? 'admin' : 'support';
+    try {
+      const history = await Message.findAll({ where: { channel }, order: [['createdAt', 'ASC']], limit: 100 });
+      socket.emit('chat_history', history.map((item) => ({
+        sender: item.sender,
+        role: item.role,
+        channel: item.channel,
+        text: item.text,
+        timestamp: item.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      })));
+    } catch (error) {
+      console.error('Message history failed:', error.message);
+      socket.emit('chat_history', []);
+    }
+  });
+
+  socket.on('chat_message', async (payload, acknowledge) => {
     const text = String(payload?.text || '').trim();
-    if (!text || text.length > 500) return;
+    if (!text || text.length > 500) {
+      acknowledge?.({ ok: false, message: 'Mensaje invalido' });
+      return;
+    }
     const channel = payload?.channel === 'admin' ? 'admin' : 'support';
-    if (channel === 'admin' && !['support', 'admin'].includes(socket.user.role)) return;
+    if (channel === 'admin' && !['support', 'admin'].includes(socket.user.role)) {
+      acknowledge?.({ ok: false, message: 'No tienes acceso a este canal' });
+      return;
+    }
 
     const message = {
       sender: socket.user.name || socket.user.email || socket.user.id,
@@ -58,7 +81,11 @@ io.on('connection', (socket) => {
       await Message.create({ userId: socket.user.id, sender: message.sender, role: message.role, channel: message.channel, text: message.text });
     } catch (error) {
       console.error('Message persistence failed:', error.message);
+      acknowledge?.({ ok: false, message: 'No se pudo guardar el mensaje' });
+      return;
     }
+
+    acknowledge?.({ ok: true });
 
     const room = channel === 'admin' ? 'admin-room' : 'support-room';
     io.to(room).emit('message', message);

@@ -8,30 +8,34 @@ const roleLabels = { mechanic: 'Mecanico', support: 'Soporte', admin: 'Admin' };
 const Chat = () => {
   const { user } = useContext(AuthContext);
   const [socket, setSocket] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [messagesByChannel, setMessagesByChannel] = useState({ support: [], admin: [] });
   const [input, setInput] = useState('');
   const [channel, setChannel] = useState('support');
   const messagesEndRef = useRef(null);
 
   const canUseAdminChannel = user?.role === 'support' || user?.role === 'admin';
+  const messages = messagesByChannel[channel] || [];
 
   useEffect(() => {
     const newSocket = connectSocket();
     setSocket(newSocket);
     if (!newSocket) return undefined;
     const handleMessage = (message) => {
-      if (!message.channel || message.channel === channel) setMessages((previous) => [...previous, message]);
+      const messageChannel = message.channel || 'support';
+      setMessagesByChannel((previous) => ({ ...previous, [messageChannel]: [...(previous[messageChannel] || []), message] }));
     };
+    const requestHistory = () => newSocket.emit('chat_history_request', { channel });
+    const handleHistory = (history) => setMessagesByChannel((previous) => ({ ...previous, [channel]: history || [] }));
     newSocket.on('message', handleMessage);
+    newSocket.on('chat_history', handleHistory);
+    newSocket.on('connect', requestHistory);
+    if (newSocket.connected) requestHistory();
     return () => {
       newSocket.off('message', handleMessage);
+      newSocket.off('chat_history', handleHistory);
+      newSocket.off('connect', requestHistory);
       newSocket.disconnect();
     };
-  }, [channel]);
-
-  useEffect(() => {
-    setMessages([]);
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [channel]);
 
   useEffect(() => {
@@ -41,8 +45,9 @@ const Chat = () => {
   const sendMessage = (event) => {
     event.preventDefault();
     if (!input.trim() || !socket || !user) return;
-    socket.emit('chat_message', { text: input, channel });
-    setInput('');
+    socket.emit('chat_message', { text: input, channel }, (result) => {
+      if (result?.ok) setInput('');
+    });
   };
 
   return (

@@ -1,4 +1,5 @@
 const axios = require('axios');
+const PDFDocument = require('pdfkit');
 const { Cart, CartItem } = require('../models');
 
 const inventory = () => axios.create({
@@ -65,6 +66,57 @@ const removeItem = async (req, res) => {
   res.json(await Cart.findByPk(cart.id, { include: [{ model: CartItem, as: 'items' }] }));
 };
 
+const updateItem = async (req, res) => {
+  const quantity = Number(req.body.quantity);
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return res.status(400).json({ message: 'Quantity must be a positive integer' });
+  }
+
+  const cart = await getActiveCart(req.user.id);
+  const item = cart && await CartItem.findOne({ where: { id: req.params.id, cartId: cart.id } });
+  if (!item) return res.status(404).json({ message: 'Cart item not found' });
+
+  try {
+    const { data: part } = await inventory().get(`/${item.partId}`, { headers: auth(req) });
+    if (quantity > part.stock) return res.status(409).json({ message: 'Insufficient stock' });
+    item.quantity = quantity;
+    item.price = part.price;
+    item.name = part.name;
+    await item.save();
+    await refreshTotal(cart);
+    res.json(await Cart.findByPk(cart.id, { include: [{ model: CartItem, as: 'items' }] }));
+  } catch (error) {
+    res.status(error.response?.status || 502).json({ message: error.response?.data?.message || 'Inventory service unavailable' });
+  }
+};
+
+const buildInvoicePdf = ({ cart, user }) => new Promise((resolve) => {
+  const document = new PDFDocument({ margin: 50 });
+  const chunks = [];
+  document.on('data', (chunk) => chunks.push(chunk));
+  document.on('end', () => resolve(Buffer.concat(chunks)));
+
+  document.fontSize(22).fillColor('#d85c1d').text('FACTURA DE COMPRA');
+  document.moveDown(0.5).fontSize(10).fillColor('#333333')
+    .text(`Orden: ${cart.id}`)
+    .text(`Fecha: ${new Date().toLocaleString('es-EC')}`)
+    .text(`Cliente: ${user.name || user.email || user.id}`)
+    .text(`Correo: ${user.email || 'No disponible'}`);
+  document.moveDown();
+  document.fontSize(11).fillColor('#111111').text('Detalle de productos', { underline: true });
+  document.moveDown(0.5);
+
+  cart.items.forEach((item) => {
+    const lineTotal = Number(item.price) * item.quantity;
+    document.fontSize(10).text(`${item.name} | ${item.quantity} x $${Number(item.price).toFixed(2)} = $${lineTotal.toFixed(2)}`);
+  });
+
+  document.moveDown();
+  document.fontSize(14).fillColor('#d85c1d').text(`TOTAL: $${Number(cart.total).toFixed(2)}`, { align: 'right' });
+  document.moveDown(2).fontSize(9).fillColor('#666666').text('Gracias por su compra. Documento generado por MicroApp.');
+  document.end();
+});
+
 const checkout = async (req, res) => {
   const cart = await getActiveCart(req.user.id);
   if (!cart || !cart.items?.length) return res.status(400).json({ message: 'Cart is empty' });
@@ -77,11 +129,14 @@ const checkout = async (req, res) => {
     cart.status = 'completed';
     await cart.save();
     await createActiveCart(req.user.id);
-    res.json({ message: 'Order completed', orderId: cart.id, total: cart.total });
+    const pdf = await buildInvoicePdf({ cart, user: req.user });
+    res.status(200)
+      .set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="factura-${cart.id}.pdf"` })
+      .send(pdf);
   } catch (error) {
     await Promise.all(reserved.map((item) => inventory().post(`/${item.partId}/release`, { quantity: item.quantity }, { headers: auth(req) }).catch(() => null)));
     res.status(error.response?.status || 502).json({ message: error.response?.data?.message || 'Checkout failed' });
   }
 };
 
-module.exports = { getCart, addItem, removeItem, checkout };
+module.exports = { getCart, addItem, updateItem, removeItem, checkout };

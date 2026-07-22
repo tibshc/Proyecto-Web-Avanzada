@@ -57,7 +57,7 @@ const Navbar = () => {
               <MessageSquare size={16} style={{marginRight: '5px'}}/>Soporte Chat
               {unread > 0 && <span className="notification-badge">{unread > 9 ? '9+' : unread}</span>}
             </Link>
-            <Link to="/cart" className="nav-link"><ShoppingCart size={16} style={{marginRight: '5px'}}/>Carrito</Link>
+            {user.role === 'mechanic' && <Link to="/cart" className="nav-link"><ShoppingCart size={16} style={{marginRight: '5px'}}/>Carrito</Link>}
             <button className="btn btn-secondary" onClick={handleLogout}>
               <LogOut size={16} style={{marginRight: '5px'}}/> Salir
             </button>

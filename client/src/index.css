@@ -163,6 +163,11 @@ a:hover {
   padding-top: 1.5rem;
   font-size: 1.1rem;
 }
+.cart-total-row > div { display: flex; flex-direction: column; gap: 0.2rem; }
+.cart-total-row > div strong { color: var(--accent); font-family: var(--font-title); font-size: 1.4rem; }
+.cart-add-confirmation { animation: slideUp 0.25s ease-out; }
+.quantity-control { display: inline-flex; align-items: center; gap: 0.6rem; }
+.quantity-control strong { min-width: 1.2rem; color: var(--text-primary); text-align: center; }
 
 .empty-state {
   color: var(--text-secondary);
@@ -343,10 +348,28 @@ a:hover {
 .stock-pill { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; color: hsl(145, 65%, 70%); background: hsla(145, 65%, 42%, 0.13); font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 .stock-low { color: hsl(355, 75%, 70%); background: hsla(355, 75%, 48%, 0.13); }
 .table-actions, .form-actions { display: flex; align-items: center; gap: 0.5rem; }
+.support-workspace { margin-bottom: 1.5rem; }
+.admin-crud-panel { margin: 1.5rem 0; }
+.admin-crud-form { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.8fr) minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 0.9fr); align-items: end; gap: 1rem; margin-top: 1.25rem; }
+.admin-crud-form .form-group { margin-bottom: 0; }
+.admin-crud-form .form-control { height: 52px; min-height: 52px; }
+.admin-crud-form textarea.form-control { height: 52px; resize: vertical; }
+.admin-crud-form .form-actions { display: flex; min-width: 0; width: 100%; padding-bottom: 0; }
+.admin-crud-form .form-actions .btn { min-width: 0; width: 100%; flex: 1 1 0; padding-right: 0.65rem; padding-left: 0.65rem; white-space: nowrap; font-size: 0.78rem; }
+.dashboard-form { margin-top: 1rem; }
+.compact-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem 0; border-bottom: 1px solid var(--border-glass); color: var(--text-secondary); font-size: 0.8rem; }
+.compact-row:last-child { border-bottom: 0; }
+.compact-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact-row strong { color: hsl(355, 75%, 70%); white-space: nowrap; }
+.admin-summary { display: grid; gap: 0.9rem; margin-top: 1.5rem; }
+.admin-summary div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem; border: 1px solid var(--border-glass); background: var(--bg-primary); }
+.admin-summary span { color: var(--text-muted); font-size: 0.75rem; }
+.admin-summary strong { color: var(--text-primary); font-size: 0.8rem; }
 
 @media (max-width: 900px) {
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
   .analytics-grid { grid-template-columns: 1fr; }
+  .admin-crud-form { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
@@ -354,6 +377,8 @@ a:hover {
   .role-panel { width: 100%; }
   .metric-grid { grid-template-columns: 1fr; }
   .bar-row { grid-template-columns: minmax(90px, 1fr) 1.4fr 1.5rem; }
+  .admin-crud-form { grid-template-columns: 1fr; }
+  .admin-crud-form .form-actions { padding-bottom: 0; }
 }
 
 /* Tarjetas de Glassmorphism */
